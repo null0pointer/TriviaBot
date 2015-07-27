@@ -1,0 +1,40 @@
+----------------------
+Question
+----------------------
+	INTEGER	: id
+	TEXT	: question
+	TEXT	: answers
+	INTEGER	: reports
+	BOOLEAN	: banned
+	TEXT	: author
+	DATE	: date
+
+
+----------------------
+User
+----------------------
+	TEXT	: uid
+	INTEGER	: reports
+	BOOLEAN	: banned
+	
+	
+----------------------
+Round
+----------------------
+	INTEGER : id
+	DATE	: date
+	TEXT	: questions
+	TEXT	: winners
+	BOOLEAN	: private
+	TEXT	: buyin
+	TEXT	: payout
+	TEXT	: commission
+	
+	
+----------------------
+Donation
+----------------------
+	INTEGER : id
+	TEXT	: uid
+	TEXT	: amount
+	DATE	: date
