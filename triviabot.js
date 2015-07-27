@@ -12,11 +12,13 @@ var authoring_answers = new Array();
 
 var request = require('request');
 var url = "https://just-dice.com";
+var my_uid;
 
 var fs = require("fs");
 var db_file = "trivia.db";
-var chat_log_file = "chat.log";
-var donation_log_file = "donation.log";
+var chat_log_file = "logs/chat.log";
+var donation_log_file = "logs/donation.log";
+var privates_log_dir = "logs/privates/";
 var exists = fs.existsSync(db_file);
 
 var sqlite3 = require("sqlite3").verbose();
@@ -25,7 +27,7 @@ var db = new sqlite3.Database(db_file);
 if (!exists) {
 	db.serialize(function() {
 		db.run('CREATE TABLE Question(id INTEGER PRIMARY KEY ASC, question TEXT, answers TEXT, reports INTEGER, banned INTEGER, author TEXT, date TEXT DEFAULT CURRENT_TIMESTAMP)');
-		db.run('CREATE TABLE User(uid TEXT, reports INTEGER, banned INTEGER)');
+		db.run('CREATE TABLE User(uid TEXT, mod INTEGER, admin INTEGER, reports INTEGER, banned INTEGER)');
 		db.run('CREATE TABLE Round(id INTEGER PRIMARY KEY ASC, questions TEXT, winners TEXT, private INTEGER, buyin TEXT, payout TEXT, commission TEXT, date TEXT DEFAULT CURRENT_TIMESTAMP)');
 		db.run('CREATE TABLE Donation(id INTEGER PRIMARY KEY ASC, uid TEXT, amount TEXT, date TEXT DEFAULT CURRENT_TIMESTAMP)');
 	});
@@ -178,6 +180,46 @@ function tidy(val, fixed)
     return val;
 }
 
+function log_chat_message(log) {
+	console.log(log);
+	fs.appendFileSync(chat_log_file, log + '\n');
+}
+
+function log_public_chat_message(sender_uid, message, date) {
+	var log = date + ' - PUBLIC from ' + sender_uid + ': ' + message;
+	log_chat_message(log);
+}
+
+function log_announcement_message(sender_uid, message, date) {
+	var log = date + ' - ANNOUNCEMENT from ' + sender_uid + ': ' + message;
+	log_chat_message(log);
+}
+
+function log_private_message(log, file) {
+	console.log(log);
+	fs.appendFileSync(privates_log_dir + file, log + '\n');
+}
+
+function log_received_private_message(sender_uid, message, date) {
+	
+	// The date field is empty for private messages...
+	date = new Date();
+	
+	var log = date + ' - PRIVATE from ' + sender_uid + ': ' + message;
+	var file = sender_uid + '.log';
+	log_private_message(log, file);
+}
+
+function log_sent_private_message(recipient_uid, message, date) {
+	var log = date + ' - PRIVATE to ' + recipient_uid + ': ' + message;
+	var file = recipient_uid + '.log';
+	log_private_message(log, file);
+}
+
+function log_donation(donor_uid, amount, date) {
+	
+}
+
 function send_public_message(message) {
 	socket.emit('chat', csrf, message);
 }
@@ -185,6 +227,9 @@ function send_public_message(message) {
 function send_private_message(recipient_uid, message) {
 	var txt = '/msg ' + recipient_uid + ' ' + message;
 	send_public_message(txt);
+	
+	var date = new Date();
+	log_sent_private_message(recipient_uid, message, date);
 }
 
 function send_announcement(message) {
@@ -192,7 +237,7 @@ function send_announcement(message) {
 	send_public_message(txt);
 }
 
-function classify_and_handle_chat(txt) {
+function classify_and_handle_chat(txt, date) {
 	
 	var sender_uid = txt.substring(txt.indexOf('(') + 1, txt.indexOf(')'));
 	
@@ -203,11 +248,11 @@ function classify_and_handle_chat(txt) {
 			if (txt.substring(txt.indexOf(')') + 2, txt.indexOf(')') + 3) === '*') {
 				// announcement
 				// (sender_uid) * <sender_name> message
-				receive_announcement(sender_uid, message);
+				receive_announcement(sender_uid, message, date);
 			} else {
 				// public message
 				// (sender_uid) <sender_name> message
-				receive_public_message(sender_uid, message);
+				receive_public_message(sender_uid, message, date);
 			}
 			break;
 			
@@ -215,21 +260,22 @@ function classify_and_handle_chat(txt) {
 			// private message
 			// [ (sender_uid) <sender_name> → (recipient_uid) <recipient_name> ] message
 			var message = txt.substring(txt.indexOf(']') + 2, txt.length);
-			receive_private_message(sender_uid, message);
+			receive_private_message(sender_uid, message, date);
 			break;
 	}
 }
 
-function receive_public_message(sender_uid, message) {
-	console.log('public from ' + sender_uid + ': ' + message);
+function receive_public_message(sender_uid, message, date) {
+	log_public_chat_message(sender_uid, message, date);
 }
 
-function receive_private_message(sender_uid, message) {
-	console.log('private from ' + sender_uid + ': ' + message);
+function receive_private_message(sender_uid, message, date) {
+	if (sender_uid === my_uid)
+		return;
+	
+	log_received_private_message(sender_uid, message, date);
 	
 	user_state = user_states[sender_uid];
-	
-	console.log(user_state);
 	
 	switch (user_state) {
 		case USER_STATE_AUTHORING_QUESTION:
@@ -249,8 +295,8 @@ function receive_private_message(sender_uid, message) {
 	}
 }
 
-function receive_announcement(sender_uid, message) {
-	console.log('announcement from ' + sender_uid + ': ' + message);
+function receive_announcement(sender_uid, message, date) {
+	log_announcement_message(sender_uid, message, date);
 }
 
 function handle_private_message_default(sender_uid, message) {
@@ -334,7 +380,7 @@ function handle_private_message_authoring(sender_uid, message) {
 	switch (command) {
 		case 'guidelines':
 			send_private_message(sender_uid, 'Your trivia question should be in english and have answers which are either common knowledge or easily google-able. You should consider accepting multiple similar answers, particularly for things like date formats.');
-			send_private_message(sender_uid, 'Answers are not case-sensitive.');
+			send_private_message(sender_uid, 'Answers are not case-sensitive. All \' and \" characters will be stripped.');
 			break;
 			
 		case 'delete':
@@ -587,6 +633,7 @@ function run_bot(cookie) {
             csrf = data.csrf;
             balance = data.balance;
             max_profit = data.max_profit;
+			my_uid = uid;
             console.log('### CONNECTED as (' + uid + ') <' + data.name + '> ###');
             // console.log('csrf is', csrf);
         } else {
@@ -603,7 +650,7 @@ function run_bot(cookie) {
     });
 
     socket.on('chat', function(txt, date) {
-        classify_and_handle_chat(txt);
+        classify_and_handle_chat(txt, date);
     });
 
     socket.on('address', function(addr, img, confs) {
