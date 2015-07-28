@@ -440,7 +440,7 @@ function handle_private_message_default(sender_uid, message) {
 			}
 			break;
 			
-		case 'add_donation':
+		case 'add_donation': // TODO: add some validation for this function it is very very injectable.
 			if (sender_uid === '359200') {
 				receive_tip(commands[1], '', commands[2], false);
 				send_private_message(sender_uid, 'Added ' + commands[2] + ' CLAM donation from ' + commands[1]);
