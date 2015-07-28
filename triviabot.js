@@ -263,8 +263,8 @@ function tell_user_top_donors(recipient_uid) {
 					top_donor = donor_uids[j];
 				}
 			}
-			top_donors[i] = top_donor + ' (' + all_donors[top_donor] + ' CLAMs)';
-			donor_uids.splice(donor_uids.indexOf(top_donor, 1));
+			top_donors[i] = top_donor + ' (' + all_donors[top_donor] + ' CLAM)';
+			donor_uids.splice(donor_uids.indexOf(top_donor), 1);
 		}
 		
 		var top_donors_string = '';
