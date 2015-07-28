@@ -216,8 +216,22 @@ function log_sent_private_message(recipient_uid, message, date) {
 	log_private_message(log, file);
 }
 
-function log_donation(donor_uid, amount, date) {
-	
+function log_donation(donor_uid, amount) {
+	date = new Date();
+	var log = date + ' - DONATION from ' + donor_uid + ': ' + amount;
+	fs.appendFileSync(donation_log_file, log);
+}
+
+function receive_tip(sender_uid, sender_name, amount) {
+	var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
+	send_announcement(announcement);
+	log_donation(sender_uid, amount);
+	db.run('INSERT INTO Donation(uid, amount) VALUES(\'' + sender_uid + '\', \'' + amount + '\')');
+}
+
+function send_tip(recipient_uid, amount) {
+	var tip = '/tip noconf ' + recipient_uid + ' ' + amount;
+	send_public_message(tip);
 }
 
 function send_public_message(message) {
@@ -652,6 +666,10 @@ function run_bot(cookie) {
     socket.on('chat', function(txt, date) {
         classify_and_handle_chat(txt, date);
     });
+	
+    socket.on('tip', function(sender_uid, sender_name, amount, r, i) {
+		receive_tip(sender_uid, sender_name, amount)
+    });
 
     socket.on('address', function(addr, img, confs) {
         console.log('DEPOSIT:', addr);
@@ -683,7 +701,6 @@ function run_bot(cookie) {
 
     socket.on('balance', function(data) {
         balance = data;
-        console.log('BALANCE:', balance);
     });
 
     socket.on('disconnect', function() {
