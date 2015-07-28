@@ -219,7 +219,7 @@ function log_sent_private_message(recipient_uid, message, date) {
 function log_donation(donor_uid, amount) {
 	date = new Date();
 	var log = date + ' - DONATION from ' + donor_uid + ': ' + amount;
-	fs.appendFileSync(donation_log_file, log);
+	fs.appendFileSync(donation_log_file, log + '\n');
 }
 
 function receive_tip(sender_uid, sender_name, amount) {
