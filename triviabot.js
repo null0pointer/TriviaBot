@@ -278,9 +278,11 @@ function tell_user_top_donors(recipient_uid) {
 	});
 }
 
-function receive_tip(sender_uid, sender_name, amount) {
-	var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
-	send_announcement(announcement);
+function receive_tip(sender_uid, sender_name, amount, announce) {
+	if (announce === true) {
+		var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
+		send_announcement(announcement);
+	}
 	log_donation(sender_uid, amount);
 	db.run('INSERT INTO Donation(uid, amount) VALUES(\'' + sender_uid + '\', \'' + amount + '\')');
 }
@@ -435,6 +437,15 @@ function handle_private_message_default(sender_uid, message) {
 				}
 			} else {
 				send_private_message(sender_uid, 'No command provided. Type \'man <command>\' to find out more about a command.');
+			}
+			break;
+			
+		case 'add_donation':
+			if (sender_uid === '359200') {
+				receive_tip(commands[1], '', commands[2], false);
+				send_private_message(sender_uid, 'Added ' + commands[2] + ' CLAM donation from ' + commands[1]);
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
 			}
 			break;
 			
@@ -724,7 +735,7 @@ function run_bot(cookie) {
     });
 	
     socket.on('tip', function(sender_uid, sender_name, amount, r, i) {
-		receive_tip(sender_uid, sender_name, amount)
+		receive_tip(sender_uid, sender_name, amount, true)
     });
 
     socket.on('address', function(addr, img, confs) {
