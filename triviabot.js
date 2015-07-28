@@ -222,6 +222,62 @@ function log_donation(donor_uid, amount) {
 	fs.appendFileSync(donation_log_file, log + '\n');
 }
 
+function tell_user_top_donors(recipient_uid) {
+	var all_donors = new Array();
+	var donor_uids = new Array();
+	
+	db.all("SELECT uid, amount FROM Donation", function(err, rows) {
+		rows.forEach(function (row) {
+			
+			var already_seen = false;
+			for (i = 0; i < donor_uids.length; i++) {
+				if (donor_uids[i] === row.uid) {
+					already_seen = true;
+					break;
+				}
+			}
+			
+			if (already_seen === false) {
+				donor_uids[donor_uids.length] = row.uid;
+			}
+			
+			total_amount = all_donors[row.uid];
+			
+			if (total_amount === undefined) {
+				total_amount = parseFloat(row.amount);
+			} else {
+				total_amount = total_amount + parseFloat(row.amount);
+			}
+			
+			all_donors[row.uid] = total_amount;
+        });
+	
+		// ['id (n clams)', 'id (n clams)', 'id (n clams)', 'id (n clams)', ...]
+		var top_donors = new Array();
+		var number_of_donors = 10;
+		if (donor_uids.length < number_of_donors) number_of_donors = donor_uids.length;
+		for (i = 0; i < number_of_donors; i++) {
+			var top_donor = donor_uids[0];
+			for (j = 1; j < donor_uids.length; j++) {
+				if (all_donors[donor_uids[j]] > all_donors[top_donor]) {
+					top_donor = donor_uids[j];
+				}
+			}
+			top_donors[i] = top_donor + ' (' + all_donors[top_donor] + ' CLAMs)';
+			donor_uids.splice(donor_uids.indexOf(top_donor, 1));
+		}
+		
+		var top_donors_string = '';
+		for (i = 0; i < top_donors.length; i++) {
+			var prefix = (i + 1) + '. ';
+			var suffix = (i === top_donors.length - 1) ? '' : ', ';
+			top_donors_string = top_donors_string + prefix + top_donors[i] + suffix;
+		}
+		
+		send_private_message(recipient_uid, top_donors_string);
+	});
+}
+
 function receive_tip(sender_uid, sender_name, amount) {
 	var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
 	send_announcement(announcement);
@@ -335,7 +391,7 @@ function handle_private_message_default(sender_uid, message) {
 			break;
 		
 		case 'donors':
-			send_private_message(sender_uid, 'Not implemented');
+			tell_user_top_donors(sender_uid);
 			break;
 			
 		case 'report':
