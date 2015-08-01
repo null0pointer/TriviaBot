@@ -1,0 +1,7 @@
+# Make DB migration utility for the app.
+# Sanitise command inputs
+# Create rounds of trivia
+# report feature
+# me command
+# Work out round scheduling (probably just have a command for start round in x minutes)
+# Private buy-in rounds.
