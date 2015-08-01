@@ -33,11 +33,7 @@ if (!exists) {
 	});
 }
 
-login_then_run_bot({hash:     '',
-                    username: env.JDBOT_USERNAME,
-                    password: env.JDBOT_PASSWORD,
-                    code:     ''
-                   });
+login_then_run_bot();
 
 var version = '0.1.5',
     socket,
@@ -562,7 +558,14 @@ function save_new_question(author_uid) {
 	db.run('INSERT INTO Question(question, answers, reports, banned, author) VALUES(\'' + clean_question + '\', \'' + answers_string + '\', \'0\', \'0\', \'' + author_uid + '\')');
 }
 
-function login_then_run_bot(credentials) {
+function login_then_run_bot() {
+	
+	var credentials = {hash: 		'',
+						username: 	env.JDBOT_USERNAME,
+	                    password: 	env.JDBOT_PASSWORD,
+	                    code:     	''
+	                   };
+	
     login(credentials, function(err, cookie) {
         if (err) {
             console.log('ERROR:', err);
@@ -639,6 +642,8 @@ function run_bot(cookie) {
 
     socket.on('error', function(err) {
         console.log('caught error:', err);
+		console.log('logging in again');
+		login_then_run_bot();
     });
 
     socket.on('init', function(data) {
