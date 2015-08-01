@@ -1,9 +1,17 @@
+Array.prototype.contains = function(element){
+    return this.indexOf(element) > -1;
+};
+
 var env = require('./env.json');
 
 var USER_STATE_DEFAULT = 'DEFAULT';
 var USER_STATE_AUTHORING_QUESTION = 'AUTHORING QUESTION';
 var USER_STATE_AUTHORING_ANSWER = 'AUTHORING ANSWER';
 var USER_STATE_CONFIRMING_QUESTION_SUBMISSION = 'CONFIRMING QUESTION SUBMISSION';
+
+var mods = new Array();
+var admins = new Array();
+var banned = new Array();
 
 var user_states = new Array();
 
@@ -33,6 +41,7 @@ if (!exists) {
 	});
 }
 
+load_mods_admins_banned();
 login_then_run_bot();
 
 var version = '0.1.5',
@@ -50,6 +59,36 @@ var version = '0.1.5',
     bet_profit_threshold = 1,
     show_all_my_bets = true,
     user_profit = {};
+	
+function load_mods_admins_banned() {
+	
+	// always make myself an admin regardless of what happens to the db
+	admins[admins.length] = '359200';
+	
+	db.all("SELECT uid FROM User WHERE mod != 0 AND banned = 0", function(err, rows) {
+		rows.forEach(function (row) {
+			if (!mods.contains(row.uid)) {
+				mods[mods.length] = row.uid;
+			}
+		});
+	});
+	
+	db.all("SELECT uid FROM User WHERE admin != 0 AND banned = 0", function(err, rows) {
+		rows.forEach(function (row) {
+			if (!admins.contains(row.uid)) {
+				admins[admins.length] = row.uid;
+			}
+		});
+	});
+	
+	db.all("SELECT uid FROM User WHERE banned != 0", function(err, rows) {
+		rows.forEach(function (row) {
+			if (!banned.contains(row.uid)) {
+				banned[banned.length] = row.uid;
+			}
+		});
+	});
+}
 
 function init_readline() {
     var readline = require('readline').createInterface({
@@ -174,6 +213,15 @@ function tidy(val, fixed)
     val = val.replace(/([.].*?)0+$/, '$1'); // remove trailing zeroes after the decimal point
     val = val.replace(/[.]$/, '');          // remove trailing decimal point
     return val;
+}
+
+function mod(uid) {
+	if (!mods.contains(uid)) {
+		mods[mods.length] = uid;
+		
+		// INSERT OR REPLACE INTO User (uid, mod) VALUES ('<uid>', 1)
+		db.run('INSERT OR REPLACE INTO User (uid, mod) VALUES (\'' + uid + '\', 1)');
+	}
 }
 
 function log_chat_message(log) {
@@ -396,6 +444,14 @@ function handle_private_message_default(sender_uid, message) {
 			send_private_message(sender_uid, 'Not implemented');
 			break;
 			
+		case 'mods':
+			send_private_message(sender_uid, mods);
+			break;
+			
+		case 'admins':
+			send_private_message(sender_uid, admins);
+			break;
+			
 		case 'man':
 			if (commands.length >= 2) {
 				switch (commands[1]) {
@@ -437,9 +493,23 @@ function handle_private_message_default(sender_uid, message) {
 			break;
 			
 		case 'add_donation': // TODO: add some validation for this function it is very very injectable.
-			if (sender_uid === '359200') {
+			if (admins.contains(sender_uid)) {
 				receive_tip(commands[1], '', commands[2], false);
 				send_private_message(sender_uid, 'Added ' + commands[2] + ' CLAM donation from ' + commands[1]);
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
+		case 'mod':
+			if (admins.contains(sender_uid)) {
+				if (mods.contains(commands[1])) {
+					send_private_message(sender_uid, commands[1] + ' is already a mod.');
+				} else {
+					mod(commands[1]);
+					send_private_message(sender_uid, 'Modded ' +  commands[1]);
+					send_private_message(commands[1], 'You have been made a mod of TriviaBot by ' + sender_uid);
+				}
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
 			}

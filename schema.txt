@@ -5,7 +5,7 @@ Question
 	TEXT	: question
 	TEXT	: answers
 	INTEGER	: reports
-	BOOLEAN	: banned
+	INTEGER	: banned
 	TEXT	: author
 	DATE	: date
 
@@ -17,7 +17,7 @@ User
 	INTEGER	: mod
 	INTEGER	: admin
 	INTEGER	: reports
-	BOOLEAN	: banned
+	INTEGER	: banned
 	
 	
 ----------------------
@@ -27,7 +27,7 @@ Round
 	DATE	: date
 	TEXT	: questions
 	TEXT	: winners
-	BOOLEAN	: private
+	INTEGER	: private
 	TEXT	: buyin
 	TEXT	: payout
 	TEXT	: commission
