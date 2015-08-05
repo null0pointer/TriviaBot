@@ -505,7 +505,7 @@ function handle_private_message_default(sender_uid, message) {
 	
 	switch (commands[0]) {
 		case 'help':
-			send_private_message(sender_uid, 'Available commands: \'man <command>\' (for more info on a command), \'info\', \'author\', \'me\', \'donors\', \'report [q/u] <id>\'');
+			send_private_message(sender_uid, 'Available commands: \'man <command>\' (for more info on a command), \'info\', \'rules\', \'author\', \'me\', \'donors\', \'report [q/u] <id>\'');
 			break;
 		
 		case 'info':
@@ -515,6 +515,10 @@ function handle_private_message_default(sender_uid, message) {
 		case 'author':
 			user_states[sender_uid] = USER_STATE_AUTHORING_QUESTION;
 			send_private_message(sender_uid, 'Submit your new trivia question as a private message. Once your question is received you will be asked for the answer(s). Type \'guidelines\' to see the question guidelines. Type \'cancel\' to cancel authoring. Type \'delete\' to delete last answer.');
+			break;
+			
+		case 'rules':
+			send_private_message(sender_uid, 'You must author at least one question to be eligible for tivia contests.');
 			break;
 		
 		case 'me':
@@ -648,7 +652,7 @@ function handle_private_message_authoring(sender_uid, message) {
 		case 'done':
 			if (user_states[sender_uid] === USER_STATE_AUTHORING_ANSWER) {
 				if (authoring_answers[sender_uid].length >= 1) {
-					send_private_message(sender_uid, 'Your question and x answer(s) have been received. Are you sure you want to submit them? (y/n)');
+					send_private_message(sender_uid, 'Your question and answers have been received. Are you sure you want to submit them? (y/n)');
 					user_states[sender_uid] = USER_STATE_CONFIRMING_QUESTION_SUBMISSION;
 				} else {
 					send_private_message(sender_uid, 'Your question must have at least 1 answer.');
