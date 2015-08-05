@@ -18,6 +18,16 @@ var user_states = new Array();
 var authoring_questions = new Array();
 var authoring_answers = new Array();
 
+// CURRENT ROUND
+var current_round_number;
+var current_round_questions;
+var current_round_eligible;
+
+var round_currently_running = false;
+var current_round_awaiting_answer = false;
+var current_round_quesiton_number;
+var current_round_winners;
+
 var request = require('request');
 var url = "https://just-dice.com";
 var my_uid;
@@ -197,11 +207,6 @@ function strip_bad_chars(str) {
 	return str.replace(/'|"/g, '');
 }
 
-function show_help() {
-    console.log('type to chat, or (.b)et, (.c)hance, (.d)eposit, (.h)i, (.l)o, (.m)artingale (.n)ame (.p)ayout, (.s)take, (.t)oggle (.w)ithdraw (.help)');
-    console.log('hit return on its own to repeat last line');
-}
-
 function tidy(val, fixed)
 {
     if (fixed === undefined)
@@ -221,6 +226,82 @@ function mod(uid) {
 		
 		// INSERT OR REPLACE INTO User (uid, mod) VALUES ('<uid>', 1)
 		db.run('INSERT OR REPLACE INTO User (uid, mod) VALUES (\'' + uid + '\', 1)');
+	}
+}
+
+function load_round() {
+	
+	current_round_running = true;
+	current_round_questions = new Array();
+	current_round_quesiton_number = 0;
+	current_round_winners = new Array();
+	current_round_eligible = new Array();
+	
+	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT 5", function(err, rows) {
+		rows.forEach(function (row) {
+			question = new Array();
+			question['question'] = row.question;
+			question['answers'] = row.answers;
+			question['id'] = row.id;
+			question['author'] = row.author;
+			
+			current_round_questions[current_round_questions.length] = question;
+        });
+		
+		db.all("SELECT COUNT(*) AS count FROM Round", function (err, rows) {
+			current_round_number = rows[0]['count'] + 1;
+			
+			db.all("SELECT DISTINCT author FROM Question WHERE banned = 0", function(err, rows) {
+				rows.forEach(function (row) {
+					current_round_eligible[current_round_eligible.length] = row.author;
+		        });
+
+				begin_round();
+				
+			});
+		});
+	});
+}
+
+function begin_round() {
+	console.log('beginning round');
+	console.log(current_round_questions);
+	console.log(current_round_eligible);
+	
+	// send_announcement('Beginning Round No. ' + current_round_number);
+	
+	ask_next_question();
+}
+
+function ask_next_question() {
+	var question = current_round_questions[current_round_quesiton_number];
+	// send_announcement('Question ' + (current_round_quesiton_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author']);
+	// send_announcement(question['question']);
+	current_round_awaiting_answer = true;
+}
+
+function check_answer(sender_uid, answer) {
+	var question = current_round_questions[current_round_quesiton_number];
+	var answers = question['answers'];
+	var answer_correct = false;
+	for (i = 0; i < answers.length; i++) {
+		if (answer.toLowerCase() === answers[i].toLowerCase()) {
+			answer_correct = true;
+			break;
+		}
+	}
+	
+	if (answer_correct) {
+		if (current_round_eligible.contains(sender_uid)) {
+			// send_announcement(sender_uid + ' is correct! Congratulations!');
+			send_private_message(sender_uid, sender_uid + ' is correct! Congratulations!');
+			current_round_awaiting_answer = false;
+			current_round_quesiton_number = current_round_quesiton_number + 1;
+			// TODO: check whether it's the last question
+			ask_next_question();
+		} else {
+			send_private_message(sender_uid, 'You answered the question correctly but are not eligible for this round. Type \'/msg ' + uid + ' rules\' to see eligibility requirements.');
+		}
 	}
 }
 
@@ -383,6 +464,10 @@ function classify_and_handle_chat(txt, date) {
 
 function receive_public_message(sender_uid, message, date) {
 	log_public_chat_message(sender_uid, message, date);
+	
+	if (current_round_awaiting_answer) {
+		check_answer(sender_uid, message);
+	}
 }
 
 function receive_private_message(sender_uid, message, date) {
@@ -509,6 +594,18 @@ function handle_private_message_default(sender_uid, message) {
 					mod(commands[1]);
 					send_private_message(sender_uid, 'Modded ' +  commands[1]);
 					send_private_message(commands[1], 'You have been made a mod of TriviaBot by ' + sender_uid);
+				}
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
+		case 'start_round':
+			if (admins.contains(sender_uid) || mods.contains(sender_uid)) {
+				if (commands.length > 1) {
+				} else {
+					load_round();
+					send_private_message(sender_uid, 'Starting round.');
 				}
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
