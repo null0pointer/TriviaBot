@@ -23,9 +23,11 @@ var current_round_number;
 var current_round_questions;
 var current_round_eligible;
 
+var current_round_per_question_payout;
+
 var round_currently_running = false;
 var current_round_awaiting_answer = false;
-var current_round_quesiton_number;
+var current_round_question_number;
 var current_round_winners;
 
 var request = require('request');
@@ -207,6 +209,19 @@ function strip_bad_chars(str) {
 	return str.replace(/'|"/g, '');
 }
 
+function jsonify_string_array(arr) {
+	var json_string = '';
+	
+	for (i = 0; i < arr.length; i++) {
+		var prefix = (i === 0) ? '[\"' : ', \"';
+		var suffix = (i === arr.length - 1) ? '\"]' : '\"';
+		var clean_answer = strip_bad_chars(arr[i]);
+		json_string = json_string + prefix + clean_answer + suffix;
+	}
+	
+	return json_string;
+}
+
 function tidy(val, fixed)
 {
     if (fixed === undefined)
@@ -231,18 +246,21 @@ function mod(uid) {
 
 function load_round() {
 	
+	var number_of_questions = 5;
+	
 	current_round_running = true;
 	current_round_questions = new Array();
-	current_round_quesiton_number = 0;
+	current_round_question_number = 0;
 	current_round_winners = new Array();
 	current_round_eligible = new Array();
+	current_round_per_question_payout = (parseFloat(balance) * 0.01) / number_of_questions;
 	
-	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT 5", function(err, rows) {
+	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
 		rows.forEach(function (row) {
 			question = new Array();
 			question['question'] = row.question;
 			question['answers'] = row.answers;
-			question['id'] = row.id;
+			question['id'] = row.id.toString();
 			question['author'] = row.author;
 			
 			current_round_questions[current_round_questions.length] = question;
@@ -268,20 +286,26 @@ function begin_round() {
 	console.log(current_round_questions);
 	console.log(current_round_eligible);
 	
-	// send_announcement('Beginning Round No. ' + current_round_number);
+	send_announcement('Beginning Round No. ' + current_round_number);
 	
 	ask_next_question();
 }
 
 function ask_next_question() {
-	var question = current_round_questions[current_round_quesiton_number];
-	// send_announcement('Question ' + (current_round_quesiton_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author'] + ' for ' + 0 + ' CLAM (QuestionID: ' + question['id'] + ')');
-	// send_announcement(question['question']);
+	console.log('asking question');
+	var question = current_round_questions[current_round_question_number];
+	console.log('Question ' + (current_round_question_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author'] + ' for ' + current_round_per_question_payout + ' CLAM (QuestionID: ' + question['id'] + ')');
+	console.log(question['question']);
+	send_announcement('Question ' + (current_round_question_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author'] + ' for ' + current_round_per_question_payout + ' CLAM (QuestionID: ' + question['id'] + ')');
+	send_announcement(question['question']);
 	current_round_awaiting_answer = true;
 }
 
 function check_answer(sender_uid, answer) {
-	var question = current_round_questions[current_round_quesiton_number];
+	
+	console.log('checking answer');
+	
+	var question = current_round_questions[current_round_question_number];
 	var answers = question['answers'];
 	var answer_correct = false;
 	for (i = 0; i < answers.length; i++) {
@@ -292,41 +316,56 @@ function check_answer(sender_uid, answer) {
 	}
 	
 	if (answer_correct) {
-		if (current_round_eligible.contains(sender_uid)) {
+		// if (current_round_eligible.contains(sender_uid)) {
 			if (current_round_winners.contains(sender_uid)) {
 				send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
 			} else {
-				// send_announcement(sender_uid + ' is correct! Congratulations!');
+				send_announcement(sender_uid + ' is correct! Congratulations!');
 				send_private_message(sender_uid, sender_uid + ' is correct! Congratulations!');
 				current_round_winners[current_round_winners.length] = sender_uid;
 				current_round_awaiting_answer = false;
-				current_round_quesiton_number = current_round_quesiton_number + 1;
+				current_round_question_number = current_round_question_number + 1;
+				console.log('answer correct');
+				console.log(current_round_question_number);
 				
 				if (current_round_question_number < current_round_questions.length) {
+					console.log('asking next question');
 					ask_next_question();
 				} else {
+					console.log('finishing round');
 					finish_round();
 				}
 			}
-		} else {
-			send_private_message(sender_uid, 'You answered the question correctly but are not eligible for this round. Type \'/msg ' + uid + ' rules\' to see eligibility requirements.');
-		}
+		// } else {
+		// 	send_private_message(sender_uid, 'You answered the question correctly but are not eligible for this round. Type \'/msg ' + uid + ' rules\' to see eligibility requirements.');
+		// }
 	}
 }
 
 function finish_round() {
 	current_round_running = false;
-	// send_announcement('The round is over, congratulations to all our winners!');
+	send_announcement('The round is over, congratulations to all our winners!');
 	payout_current_round_winners();
 	save_current_round_to_db();
 }
 
 function payout_current_round_winners() {
-	// TODO: tip winners
+	send_multi_tip(current_round_winners, current_round_per_question_payout, 'each');
 }
 
 function save_current_round_to_db() {
-	// TODO: write round to DB
+	var question_ids = new Array();
+	
+	for (i = 0; i < current_round_questions.length; i++) {
+		question_ids[question_ids.length] = current_round_questions[i]['id'];
+	}
+	
+	var questions_json = jsonify_string_array(question_ids);
+	var winners_json = jsonify_string_array(current_round_winners);
+	var total_payout = current_round_per_question_payout * current_round_questions.length;
+	total_payout = total_payout.toString();
+	
+	db.run('INSERT INTO Round(questions, winners, private, buyin, payout, commission) VALUES(\'' + questions_json + '\', \'' + winners_json + '\', 0, \'0\', \'' + total_payout + '\', \'0\')')
 }
 
 function log_chat_message(log) {
@@ -441,6 +480,18 @@ function send_tip(recipient_uid, amount) {
 	send_public_message(tip);
 }
 
+function send_multi_tip(recipients, amount, each_split) {
+	if (recipients.length > 0) {
+		var recipients_list = recipients[0];
+		for (i = 1; i < recipients.length; i++) {
+			recipients_list = recipients_list + ',' + recipients[i];
+		}
+		var tip = '/tip noconf ' + recipients_list + ' ' + amount + ' ' + each_split;
+		console.log(tip);
+		// send_public_message(tip);
+	}
+}
+
 function send_public_message(message) {
 	socket.emit('chat', csrf, message);
 }
@@ -489,9 +540,9 @@ function classify_and_handle_chat(txt, date) {
 function receive_public_message(sender_uid, message, date) {
 	log_public_chat_message(sender_uid, message, date);
 	
-	if (current_round_awaiting_answer) {
-		check_answer(sender_uid, message);
-	}
+	// if (current_round_awaiting_answer) {
+	// 	check_answer(sender_uid, message);
+	// }
 }
 
 function receive_private_message(sender_uid, message, date) {
@@ -499,6 +550,11 @@ function receive_private_message(sender_uid, message, date) {
 		return;
 	
 	log_received_private_message(sender_uid, message, date);
+	
+	if (current_round_awaiting_answer) {
+		check_answer(sender_uid, message);
+		return;
+	}
 	
 	user_state = user_states[sender_uid];
 	
@@ -736,15 +792,7 @@ function handle_private_message_confirming_question_submission(sender_uid, messa
 }
 
 function save_new_question(author_uid) {
-	var answers_string = '';
-	
-	for (i = 0; i < authoring_answers[author_uid].length; i++) {
-		var prefix = (i === 0) ? '[\"' : ', \"';
-		var suffix = (i === authoring_answers[author_uid].length - 1) ? '\"]' : '\"';
-		var clean_answer = strip_bad_chars(authoring_answers[author_uid][i]);
-		answers_string = answers_string + prefix + clean_answer + suffix;
-	}
-	
+	var answers_string = jsonify_string_array(authoring_answers[author_uid]);
 	var clean_question = strip_bad_chars(authoring_questions[author_uid]);
 	
 	console.log(clean_question);
