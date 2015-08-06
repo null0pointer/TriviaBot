@@ -275,7 +275,7 @@ function begin_round() {
 
 function ask_next_question() {
 	var question = current_round_questions[current_round_quesiton_number];
-	// send_announcement('Question ' + (current_round_quesiton_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author']);
+	// send_announcement('Question ' + (current_round_quesiton_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author'] + ' for ' + 0 + ' CLAM (QuestionID: ' + question['id'] + ')');
 	// send_announcement(question['question']);
 	current_round_awaiting_answer = true;
 }
@@ -293,16 +293,40 @@ function check_answer(sender_uid, answer) {
 	
 	if (answer_correct) {
 		if (current_round_eligible.contains(sender_uid)) {
-			// send_announcement(sender_uid + ' is correct! Congratulations!');
-			send_private_message(sender_uid, sender_uid + ' is correct! Congratulations!');
-			current_round_awaiting_answer = false;
-			current_round_quesiton_number = current_round_quesiton_number + 1;
-			// TODO: check whether it's the last question
-			ask_next_question();
+			if (current_round_winners.contains(sender_uid)) {
+				send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
+			} else {
+				// send_announcement(sender_uid + ' is correct! Congratulations!');
+				send_private_message(sender_uid, sender_uid + ' is correct! Congratulations!');
+				current_round_winners[current_round_winners.length] = sender_uid;
+				current_round_awaiting_answer = false;
+				current_round_quesiton_number = current_round_quesiton_number + 1;
+				
+				if (current_round_question_number < current_round_questions.length) {
+					ask_next_question();
+				} else {
+					finish_round();
+				}
+			}
 		} else {
 			send_private_message(sender_uid, 'You answered the question correctly but are not eligible for this round. Type \'/msg ' + uid + ' rules\' to see eligibility requirements.');
 		}
 	}
+}
+
+function finish_round() {
+	current_round_running = false;
+	// send_announcement('The round is over, congratulations to all our winners!');
+	payout_current_round_winners();
+	save_current_round_to_db();
+}
+
+function payout_current_round_winners() {
+	// TODO: tip winners
+}
+
+function save_current_round_to_db() {
+	// TODO: write round to DB
 }
 
 function log_chat_message(log) {
