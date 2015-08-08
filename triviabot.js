@@ -753,7 +753,7 @@ function handle_private_message_authoring(sender_uid, message) {
 }
 
 function handle_private_message_authoring_question(sender_uid, message) {
-	send_private_message(sender_uid, 'Your question has been received. Please submit each accepted answer as a separate private message. Once you have entered all accepted answers type \'done\'.');
+	send_private_message(sender_uid, 'Your question has been received. Please submit each accepted answer as a separate private message. Once you have entered all accepted answers type \'/done\'.');
 	user_states[sender_uid] = USER_STATE_AUTHORING_ANSWER;
 	authoring_questions[sender_uid] = message;
 	authoring_answers[sender_uid] = new Array();
