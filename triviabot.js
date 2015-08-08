@@ -222,6 +222,11 @@ function jsonify_string_array(arr) {
 	return json_string;
 }
 
+function dejsonify_array_string(json) {
+	var decapped_json = json.substring(2, json.length - 2);
+	return decapped_json.split('\", \"');
+}
+
 function tidy(val, fixed)
 {
     if (fixed === undefined)
@@ -259,7 +264,7 @@ function load_round() {
 		rows.forEach(function (row) {
 			question = new Array();
 			question['question'] = row.question;
-			question['answers'] = row.answers;
+			question['answers'] = dejsonify_array_string(row.answers);
 			question['id'] = row.id.toString();
 			question['author'] = row.author;
 			
