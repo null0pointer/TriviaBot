@@ -287,6 +287,7 @@ function begin_round() {
 	console.log(current_round_eligible);
 	
 	send_announcement('Beginning Round No. ' + current_round_number);
+	send_announcement('You must answer questions in a private message to the bot. (ie. \'/msg ' + uid + ' <answer>\')');
 	
 	ask_next_question();
 }
