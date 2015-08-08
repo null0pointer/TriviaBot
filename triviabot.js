@@ -320,8 +320,7 @@ function check_answer(sender_uid, answer) {
 			if (current_round_winners.contains(sender_uid)) {
 				send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
 			} else {
-				send_announcement(sender_uid + ' is correct! Congratulations!');
-				send_private_message(sender_uid, sender_uid + ' is correct! Congratulations!');
+				send_announcement(sender_uid + ' answered correctly with \'' + answer + '\'');
 				current_round_winners[current_round_winners.length] = sender_uid;
 				current_round_awaiting_answer = false;
 				current_round_question_number = current_round_question_number + 1;
@@ -488,7 +487,7 @@ function send_multi_tip(recipients, amount, each_split) {
 		}
 		var tip = '/tip noconf ' + recipients_list + ' ' + amount + ' ' + each_split;
 		console.log(tip);
-		// send_public_message(tip);
+		send_public_message(tip);
 	}
 }
 
@@ -539,10 +538,6 @@ function classify_and_handle_chat(txt, date) {
 
 function receive_public_message(sender_uid, message, date) {
 	log_public_chat_message(sender_uid, message, date);
-	
-	// if (current_round_awaiting_answer) {
-	// 	check_answer(sender_uid, message);
-	// }
 }
 
 function receive_private_message(sender_uid, message, date) {
@@ -550,11 +545,6 @@ function receive_private_message(sender_uid, message, date) {
 		return;
 	
 	log_received_private_message(sender_uid, message, date);
-	
-	if (current_round_awaiting_answer) {
-		check_answer(sender_uid, message);
-		return;
-	}
 	
 	user_state = user_states[sender_uid];
 	
@@ -584,84 +574,91 @@ function handle_private_message_default(sender_uid, message) {
 	commands = message.split(' ');
 	
 	switch (commands[0]) {
-		case 'help':
-			send_private_message(sender_uid, 'Available commands: \'man <command>\' (for more info on a command), \'info\', \'rules\', \'author\', \'me\', \'donors\', \'report [q/u] <id>\'');
+		case '/help':
+			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/report [q/u] <id>\'');
 			break;
 		
-		case 'info':
+		case '/info':
 			send_private_message(sender_uid, 'TriviaBot is a bot for automating trivia contests where CLAMs are awarded for correct answers. My creator is (359200) <null>.');
 			break;
 			
-		case 'author':
+		case '/author':
 			user_states[sender_uid] = USER_STATE_AUTHORING_QUESTION;
-			send_private_message(sender_uid, 'Submit your new trivia question as a private message. Once your question is received you will be asked for the answer(s). Type \'guidelines\' to see the question guidelines. Type \'cancel\' to cancel authoring. Type \'delete\' to delete last answer.');
+			send_private_message(sender_uid, 'Submit your new trivia question as a private message. Once your question is received you will be asked for the answer(s). Type \'/guidelines\' to see the question guidelines. Type \'/cancel\' to cancel authoring. Type \'/delete\' to delete last answer.');
 			break;
 			
-		case 'rules':
+		case '/rules':
 			send_private_message(sender_uid, 'You must author at least one question to be eligible for tivia contests.');
 			break;
 		
-		case 'me':
+		case '/me':
 			send_private_message(sender_uid, 'Not implemented');
 			break;
 		
-		case 'donors':
+		case '/donors':
 			tell_user_top_donors(sender_uid);
 			break;
 			
-		case 'report':
+		case '/report':
 			send_private_message(sender_uid, 'Not implemented');
 			break;
 			
-		case 'mods':
+		case '/mods':
 			send_private_message(sender_uid, mods);
 			break;
 			
-		case 'admins':
+		case '/admins':
 			send_private_message(sender_uid, admins);
 			break;
 			
-		case 'man':
+		case '/man':
 			if (commands.length >= 2) {
 				switch (commands[1]) {
+					case '/help':
 					case 'help':
 						send_private_message(sender_uid, 'See a list of available commands.');
 						break;
-				
+						
+					case '/info':
 					case 'info':
 						send_private_message(sender_uid, 'Find out more information about this bot.');
 						break;
 				
+					case '/author':
 					case 'author':
 						send_private_message(sender_uid, 'Author a new question with one or many accepted answers.');
 						break;
 				
+					case '/me':
 					case 'me':
 						send_private_message(sender_uid, '(Not implemented) See a list of the questions you have authored.');
 						break;
 				
+					case '/donors':
 					case 'donors':
 						send_private_message(sender_uid, '(Not implemented) See a list of people who have funded the trivia.');
 						break;
 					
+					case '/report':
 					case 'report':
 						send_private_message(sender_uid, '(Not implemented) Report users who are abusing the bot or questions which are bad. \'report u <user id>\' to report a user. \'report q <question id>\' to report a question.');
 						break;
 				
+					case '/man':
 					case 'man':
 						send_private_message(sender_uid, 'What are you doing?');
 						break;
 					
 					default:
-						send_private_message(sender_uid, 'Unknown command \'' + commands[1] + '\'. Type \'help\' for a list of available commands.');
+						send_private_message(sender_uid, 'Unknown command \'' + commands[1] + '\'. Type \'/help\' for a list of available commands.');
 						break;
 				}
 			} else {
-				send_private_message(sender_uid, 'No command provided. Type \'man <command>\' to find out more about a command.');
+				send_private_message(sender_uid, 'No command provided. Type \'/man <command>\' to find out more about a command.');
 			}
 			break;
 			
-		case 'add_donation': // TODO: add some validation for this function it is very very injectable.
+		case '/add_donation': // TODO: add some validation for this function it is very very injectable.
 			if (admins.contains(sender_uid)) {
 				receive_tip(commands[1], '', commands[2], false);
 				send_private_message(sender_uid, 'Added ' + commands[2] + ' CLAM donation from ' + commands[1]);
@@ -670,7 +667,7 @@ function handle_private_message_default(sender_uid, message) {
 			}
 			break;
 			
-		case 'mod':
+		case '/mod':
 			if (admins.contains(sender_uid)) {
 				if (mods.contains(commands[1])) {
 					send_private_message(sender_uid, commands[1] + ' is already a mod.');
@@ -684,7 +681,7 @@ function handle_private_message_default(sender_uid, message) {
 			}
 			break;
 			
-		case 'start_round':
+		case '/start_round':
 			if (admins.contains(sender_uid) || mods.contains(sender_uid)) {
 				if (commands.length > 1) {
 				} else {
@@ -697,7 +694,11 @@ function handle_private_message_default(sender_uid, message) {
 			break;
 			
 		default:
-			send_private_message(sender_uid, 'Unknown command. Type \'help\' for a list of available commands.');
+			if (current_round_awaiting_answer) {
+				check_answer(sender_uid, message);
+			} else {
+				send_private_message(sender_uid, 'Unknown command. Type \'/help\' for a list of available commands.');
+			}
 			break;
 	}
 }
@@ -706,12 +707,12 @@ function handle_private_message_authoring(sender_uid, message) {
 	var command = message.split(' ')[0]
 	
 	switch (command) {
-		case 'guidelines':
+		case '/guidelines':
 			send_private_message(sender_uid, 'Your trivia question should be in english and have answers which are either common knowledge or easily google-able. You should consider accepting multiple similar answers, particularly for things like date formats.');
 			send_private_message(sender_uid, 'Answers are not case-sensitive. All \' and \" characters will be stripped.');
 			break;
 			
-		case 'delete':
+		case '/delete':
 			var answers = authoring_answers[sender_uid];
 			if (answers.length >= 1) {
 				var s = ((answers.length - 1) != 1) ? 's' : '';
@@ -722,14 +723,14 @@ function handle_private_message_authoring(sender_uid, message) {
 			}
 			break;
 			
-		case 'cancel':
+		case '/cancel':
 			send_private_message(sender_uid, 'You have left authoring mode and your question has been deleted.');
 			user_states[sender_uid] = USER_STATE_DEFAULT;
 			delete authoring_questions[sender_uid];
 			delete authoring_answers[sender_uid];
 			break;
 			
-		case 'done':
+		case '/done':
 			if (user_states[sender_uid] === USER_STATE_AUTHORING_ANSWER) {
 				if (authoring_answers[sender_uid].length >= 1) {
 					send_private_message(sender_uid, 'Your question and answers have been received. Are you sure you want to submit them? (y/n)');
@@ -770,6 +771,9 @@ function handle_private_message_confirming_question_submission(sender_uid, messa
 	var command = message.split(' ')[0];
 	
 	switch (command) {
+		case '/y':
+		case '/yes':
+		case '/done':
 		case 'y':
 		case 'yes':
 		case 'done':
@@ -777,7 +781,9 @@ function handle_private_message_confirming_question_submission(sender_uid, messa
 			user_states[sender_uid] = USER_STATE_DEFAULT;
 			save_new_question(sender_uid);
 			break;
-			
+		
+		case '/n':
+		case '/no':	
 		case 'n':
 		case 'no':
 			send_private_message(sender_uid, 'Please submit each accepted answer as a separate private message. Once you have entered all accepted answers type \'done\'. Your question currently has ' + authoring_answers[sender_uid].length + ' answers.');
