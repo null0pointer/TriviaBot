@@ -410,6 +410,15 @@ function log_donation(donor_uid, amount) {
 	fs.appendFileSync(donation_log_file, log + '\n');
 }
 
+function tell_user_question_details(recipient_uid, question_uid) {
+	db.all("SELECT * FROM Question WHERE id = \'" + question_uid + "\'", function(err, rows) {
+		rows.forEach(function (row) {
+			send_private_message(recipient_uid, row.question);
+			send_private_message(recipient_uid, row.answers);
+		});
+	});
+}
+
 function tell_user_top_donors(recipient_uid) {
 	var all_donors = new Array();
 	var donor_uids = new Array();
@@ -677,6 +686,14 @@ function handle_private_message_default(sender_uid, message) {
 					send_private_message(sender_uid, 'Modded ' +  commands[1]);
 					send_private_message(commands[1], 'You have been made a mod of TriviaBot by ' + sender_uid);
 				}
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
+		case '/read':
+			if (admins.contains(sender_uid)) {
+				tell_user_question_details(sender_uid, commands[1]);
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
 			}
