@@ -437,11 +437,11 @@ function tell_user_my_details(recipient_uid) {
 			var question_count = rows[0]['count'];
 			
 			send_private_message(recipient_uid, 'You have donated ' + donated_amount + ' CLAM and contributed ' + question_count + ' questions.');
-			// if (question_count > 0) {
-			// 	send_private_message(recipient_uid, 'You are eligible to win prizes.');
-			// } else {
+			if (question_count > 0) {
+				send_private_message(recipient_uid, 'You are eligible to win prizes.');
+			} else {
 				send_private_message(recipient_uid, 'You are not eligible to win prizes. Type \'/rules\' to find out how to become eligible');
-			// }
+			}
 		});
 	});
 }
