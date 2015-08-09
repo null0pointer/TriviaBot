@@ -424,6 +424,28 @@ function tell_user_question_details(recipient_uid, question_uid) {
 	});
 }
 
+function tell_user_my_details(recipient_uid) {
+	db.all("SELECT amount FROM Donation WHERE uid = \'" + recipient_uid + "\'", function(err, rows) {
+		
+		var donated_amount = 0;
+		
+		rows.forEach(function (row) {
+			donated_amount = donated_amount + parseFloat(row.amount);
+        });
+		
+		db.all("SELECT COUNT(*) AS count FROM Question WHERE author = \'" + recipient_uid + "\'", function (err, rows) {
+			var question_count = rows[0]['count'];
+			
+			send_private_message(recipient_uid, 'You have donated ' + donated_amount + ' CLAM and contributed ' + question_count + ' questions.');
+			// if (question_count > 0) {
+			// 	send_private_message(recipient_uid, 'You are eligible to win prizes.');
+			// } else {
+				send_private_message(recipient_uid, 'You are not eligible to win prizes. Type \'/rules\' to find out how to become eligible');
+			// }
+		});
+	});
+}
+
 function tell_user_top_donors(recipient_uid) {
 	var all_donors = new Array();
 	var donor_uids = new Array();
@@ -603,11 +625,11 @@ function handle_private_message_default(sender_uid, message) {
 			break;
 			
 		case '/rules':
-			send_private_message(sender_uid, 'You must author at least one question to be eligible for tivia contests.');
+			send_private_message(sender_uid, 'You must author at least one question to be eligible for trivia contests.');
 			break;
 		
 		case '/me':
-			send_private_message(sender_uid, 'Not implemented');
+			tell_user_my_details(sender_uid);
 			break;
 		
 		case '/donors':
