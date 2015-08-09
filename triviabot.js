@@ -334,10 +334,9 @@ function check_answer(sender_uid, answer) {
 				console.log(current_round_question_number);
 				
 				if (current_round_question_number < current_round_questions.length) {
-					console.log('asking next question');
-					ask_next_question();
+					send_announcement('Next question in 1 minute.');
+					setTimeout(ask_next_question, 60000);
 				} else {
-					console.log('finishing round');
 					finish_round();
 				}
 			}
@@ -348,6 +347,7 @@ function check_answer(sender_uid, answer) {
 }
 
 function finish_round() {
+	console.log('finishing round');
 	current_round_running = false;
 	send_announcement('The round is over, congratulations to all our winners!');
 	payout_current_round_winners();
