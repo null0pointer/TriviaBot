@@ -636,7 +636,7 @@ function handle_private_message_default(sender_uid, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/report [q/u] <id>\'');
+			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/report [q/u] <id>\'');
 			break;
 		
 		case '/info':
@@ -676,6 +676,10 @@ function handle_private_message_default(sender_uid, message) {
 			tell_user_number_of_questions(sender_uid);
 			break;
 			
+		case '/balance':
+			send_private_message(sender_uid, balance + ' CLAM');
+			break;
+			
 		case '/man':
 			if (commands.length >= 2) {
 				switch (commands[1]) {
@@ -712,6 +716,11 @@ function handle_private_message_default(sender_uid, message) {
 					case '/questions':
 					case 'questions':
 						send_private_message(sender_uid, 'Find out how smart the bot is.');
+						break;
+						
+					case '/balance':
+					case 'balance':
+						send_private_message(sender_uid, 'Find out how big the bots bankroll is.');
 						break;
 				
 					case '/man':
@@ -754,6 +763,14 @@ function handle_private_message_default(sender_uid, message) {
 		case '/read':
 			if (admins.contains(sender_uid)) {
 				tell_user_question_details(sender_uid, commands[1]);
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
+		case '/ban':
+			if (admins.contains(sender_uid)) {
+				
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
 			}
