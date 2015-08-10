@@ -1,7 +1,9 @@
+# Trim leading spaces and check for starting / to check for commands (fix the /tip vulnerability!!)
+# Ban questions/users
+# Truncate the tip size after 8 decimal places
+# Check answer sender against question author
 # Make DB migration utility for the app.
 # Sanitise command inputs
-# Create rounds of trivia
 # report feature
-# me command
 # Work out round scheduling (probably just have a command for start round in x minutes)
 # Private buy-in rounds.

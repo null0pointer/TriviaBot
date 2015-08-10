@@ -18,6 +18,11 @@ var user_states = new Array();
 var authoring_questions = new Array();
 var authoring_answers = new Array();
 
+var pending_chat_messages = new Array();
+var last_chat_message_time = 0;
+
+setInterval(emit_chat_message, 100);
+
 // CURRENT ROUND
 var current_round_number;
 var current_round_questions;
@@ -528,8 +533,20 @@ function send_multi_tip(recipients, amount, each_split) {
 	}
 }
 
+// 3s between messages, up to 4 pending, send 4 messages at the same time but have to wait 12s for them to go through
+function emit_chat_message() {
+	if (pending_chat_messages.length > 0) {
+		var current_time = (new Date).getTime();
+		if (current_time - last_chat_message_time >= 3000) {
+			socket.emit('chat', csrf, pending_chat_messages[0]);
+			pending_chat_messages.splice(0, 1);
+			last_chat_message_time = current_time;
+		}
+	}
+}
+
 function send_public_message(message) {
-	socket.emit('chat', csrf, message);
+	pending_chat_messages[pending_chat_messages.length] = message;
 }
 
 function send_private_message(recipient_uid, message) {
