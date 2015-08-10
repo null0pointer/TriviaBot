@@ -429,6 +429,13 @@ function tell_user_question_details(recipient_uid, question_uid) {
 	});
 }
 
+function tell_user_number_of_questions(recipient_uid) {
+	db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 0", function (err, rows) {
+		var question_count = rows[0]['count'];
+		send_private_message(recipient_uid, 'The bot currently knows ' + question_count + ' questions.');
+	});
+}
+
 function tell_user_my_details(recipient_uid) {
 	db.all("SELECT amount FROM Donation WHERE uid = \'" + recipient_uid + "\'", function(err, rows) {
 		
@@ -629,7 +636,7 @@ function handle_private_message_default(sender_uid, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/report [q/u] <id>\'');
+			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/report [q/u] <id>\'');
 			break;
 		
 		case '/info':
@@ -665,6 +672,10 @@ function handle_private_message_default(sender_uid, message) {
 			send_private_message(sender_uid, admins);
 			break;
 			
+		case '/questions':
+			tell_user_number_of_questions(sender_uid);
+			break;
+			
 		case '/man':
 			if (commands.length >= 2) {
 				switch (commands[1]) {
@@ -685,17 +696,22 @@ function handle_private_message_default(sender_uid, message) {
 				
 					case '/me':
 					case 'me':
-						send_private_message(sender_uid, '(Not implemented) See a list of the questions you have authored.');
+						send_private_message(sender_uid, 'See a list of the questions you have authored.');
 						break;
 				
 					case '/donors':
 					case 'donors':
-						send_private_message(sender_uid, '(Not implemented) See a list of people who have funded the trivia.');
+						send_private_message(sender_uid, 'See a list of people who have funded the trivia.');
 						break;
 					
 					case '/report':
 					case 'report':
 						send_private_message(sender_uid, '(Not implemented) Report users who are abusing the bot or questions which are bad. \'report u <user id>\' to report a user. \'report q <question id>\' to report a question.');
+						break;
+						
+					case '/questions':
+					case 'questions':
+						send_private_message(sender_uid, 'Find out how smart the bot is.');
 						break;
 				
 					case '/man':
