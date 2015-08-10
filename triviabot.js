@@ -271,7 +271,7 @@ function load_round() {
 	current_round_question_number = 0;
 	current_round_winners = new Array();
 	current_round_eligible = new Array();
-	current_round_per_question_payout = (parseFloat(balance) * 0.01) / number_of_questions;
+	current_round_per_question_payout = tidy((parseFloat(balance) * 0.01) / number_of_questions);
 	
 	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
 		rows.forEach(function (row) {
@@ -280,20 +280,20 @@ function load_round() {
 			question['answers'] = dejsonify_array_string(row.answers);
 			question['id'] = row.id.toString();
 			question['author'] = row.author;
-			
+
 			current_round_questions[current_round_questions.length] = question;
         });
-		
+
 		db.all("SELECT COUNT(*) AS count FROM Round", function (err, rows) {
 			current_round_number = rows[0]['count'] + 1;
-			
+
 			db.all("SELECT DISTINCT author FROM Question WHERE banned = 0", function(err, rows) {
 				rows.forEach(function (row) {
 					current_round_eligible[current_round_eligible.length] = row.author;
 		        });
 
 				begin_round();
-				
+
 			});
 		});
 	});

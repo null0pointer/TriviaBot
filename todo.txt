@@ -1,6 +1,7 @@
-# Ban questions/users
-# Truncate the tip size after 8 decimal places
 # Check answer sender against question author
+# show winner name rather than id
+------------ TEST RUN --------------
+# Ban users
 # Make DB migration utility for the app.
 # Sanitise command inputs
 # report feature
