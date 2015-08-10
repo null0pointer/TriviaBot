@@ -1,4 +1,3 @@
-# Check answer sender against question author
 # show winner name rather than id
 ------------ TEST RUN --------------
 # Ban users
