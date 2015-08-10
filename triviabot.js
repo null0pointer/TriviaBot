@@ -839,7 +839,9 @@ function handle_private_message_authoring(sender_uid, message) {
 			break;
 			
 		default:
-			if (user_states[sender_uid] === USER_STATE_AUTHORING_QUESTION) {
+			if (command.charAt(0) === '/') {
+				send_private_message(sender_uid, 'Unknown command.');
+			} else if (user_states[sender_uid] === USER_STATE_AUTHORING_QUESTION) {
 				handle_private_message_authoring_question(sender_uid, message);
 			} else {
 				handle_private_message_authoring_answer(sender_uid, message);

@@ -1,4 +1,3 @@
-# Trim leading spaces and check for starting / to check for commands (fix the /tip vulnerability!!)
 # Ban questions/users
 # Truncate the tip size after 8 decimal places
 # Check answer sender against question author
