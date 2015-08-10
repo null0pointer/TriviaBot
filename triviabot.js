@@ -320,7 +320,7 @@ function ask_next_question() {
 	current_round_awaiting_answer = true;
 }
 
-function check_answer(sender_uid, answer) {
+function check_answer(sender_uid, sender_name, answer) {
 	
 	console.log('checking answer');
 	
@@ -341,7 +341,7 @@ function check_answer(sender_uid, answer) {
 			} else if (current_round_winners.contains(sender_uid)) {
 				send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
 			} else {
-				send_announcement(sender_uid + ' answered correctly with \'' + answer + '\'');
+				send_announcement('(' + sender_uid + ') <' + sender_name + '> answered correctly with \'' + answer + '\'');
 				current_round_winners[current_round_winners.length] = sender_uid;
 				current_round_awaiting_answer = false;
 				current_round_question_number = current_round_question_number + 1;
@@ -585,6 +585,7 @@ function send_announcement(message) {
 function classify_and_handle_chat(txt, date) {
 	
 	var sender_uid = txt.substring(txt.indexOf('(') + 1, txt.indexOf(')'));
+	var sender_name = txt.substring(txt.indexOf('<') + 1, txt.indexOf('>'));
 	
 	switch(txt.substring(0, 1)) {
 		case '(':
@@ -593,11 +594,11 @@ function classify_and_handle_chat(txt, date) {
 			if (txt.substring(txt.indexOf(')') + 2, txt.indexOf(')') + 3) === '*') {
 				// announcement
 				// (sender_uid) * <sender_name> message
-				receive_announcement(sender_uid, message, date);
+				receive_announcement(sender_uid, sender_name, message, date);
 			} else {
 				// public message
 				// (sender_uid) <sender_name> message
-				receive_public_message(sender_uid, message, date);
+				receive_public_message(sender_uid, sender_name, message, date);
 			}
 			break;
 			
@@ -605,16 +606,16 @@ function classify_and_handle_chat(txt, date) {
 			// private message
 			// [ (sender_uid) <sender_name> → (recipient_uid) <recipient_name> ] message
 			var message = txt.substring(txt.indexOf(']') + 2, txt.length);
-			receive_private_message(sender_uid, message, date);
+			receive_private_message(sender_uid, sender_name, message, date);
 			break;
 	}
 }
 
-function receive_public_message(sender_uid, message, date) {
+function receive_public_message(sender_uid, sender_name, message, date) {
 	log_public_chat_message(sender_uid, message, date);
 }
 
-function receive_private_message(sender_uid, message, date) {
+function receive_private_message(sender_uid, sender_name, message, date) {
 	if (sender_uid === my_uid)
 		return;
 	
@@ -635,16 +636,16 @@ function receive_private_message(sender_uid, message, date) {
 		case undefined:
 			user_states[sender_uid] = USER_STATE_DEFAULT;
 		case USER_STATE_DEFAULT:
-			handle_private_message_default(sender_uid, message);
+			handle_private_message_default(sender_uid, sender_name, message);
 			break;
 	}
 }
 
-function receive_announcement(sender_uid, message, date) {
+function receive_announcement(sender_uid, sender_name, message, date) {
 	log_announcement_message(sender_uid, message, date);
 }
 
-function handle_private_message_default(sender_uid, message) {
+function handle_private_message_default(sender_uid, sender_name, message) {
 	commands = message.split(' ');
 	
 	switch (commands[0]) {
@@ -808,7 +809,7 @@ function handle_private_message_default(sender_uid, message) {
 			
 		default:
 			if (current_round_awaiting_answer) {
-				check_answer(sender_uid, message);
+				check_answer(sender_uid, sender_name, message);
 			} else {
 				send_private_message(sender_uid, 'Unknown command. Type \'/help\' for a list of available commands.');
 			}

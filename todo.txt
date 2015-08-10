@@ -1,5 +1,3 @@
-# show winner name rather than id
------------- TEST RUN --------------
 # Ban users
 # Make DB migration utility for the app.
 # Sanitise command inputs
