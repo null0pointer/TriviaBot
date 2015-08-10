@@ -254,6 +254,14 @@ function mod(uid) {
 	}
 }
 
+function ban_question(id) {
+	db.run('UPDATE Question SET banned = 1 WHERE id = ' + id);
+}
+
+function ban_user(id) {
+	
+}
+
 function load_round() {
 	
 	var number_of_questions = 5;
@@ -423,6 +431,9 @@ function log_donation(donor_uid, amount) {
 function tell_user_question_details(recipient_uid, question_uid) {
 	db.all("SELECT * FROM Question WHERE id = \'" + question_uid + "\'", function(err, rows) {
 		rows.forEach(function (row) {
+			if (row.banned != 0) {
+				send_private_message(recipient_uid, 'BANNED QUESTION');
+			}
 			send_private_message(recipient_uid, row.question);
 			send_private_message(recipient_uid, row.answers);
 		});
@@ -770,7 +781,12 @@ function handle_private_message_default(sender_uid, message) {
 			
 		case '/ban':
 			if (admins.contains(sender_uid)) {
-				
+				if (commands[1] == 'q') {
+					ban_question(commands[2]);
+					send_private_message(sender_uid, 'Banned question ' + commands[2]);
+				} else if (commands[1] == 'u') {
+					send_private_message(sender_uid, 'Not implemented');
+				}
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
 			}
