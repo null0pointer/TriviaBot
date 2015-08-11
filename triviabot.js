@@ -35,6 +35,8 @@ var current_round_awaiting_answer = false;
 var current_round_question_number;
 var current_round_winners;
 
+var current_question_timeout_id;
+
 var request = require('request');
 var url = "https://just-dice.com";
 var my_uid;
@@ -305,9 +307,18 @@ function begin_round() {
 	console.log(current_round_eligible);
 	
 	send_announcement('Beginning Round No. ' + current_round_number);
-	send_announcement('You must answer questions in a private message to the bot. (ie. \'/msg ' + uid + ' <answer>\')');
+	send_announcement('You MUST answer questions in a private message to the bot. (ie. \'/msg ' + uid + ' <answer>\')');
 	
 	ask_next_question();
+}
+
+function skip_question(reason) {
+	console.log('skipping question: ' + reason);
+	send_announcement('Skipping question: ' + reason);
+	current_round_awaiting_answer = false;
+	current_round_question_number = current_round_question_number + 1;
+	send_announcement('Next question in 1 minute.');
+	setTimeout(ask_next_question, 60000);
 }
 
 function ask_next_question() {
@@ -317,6 +328,7 @@ function ask_next_question() {
 	console.log(question['question']);
 	send_announcement('Question ' + (current_round_question_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author'] + ' for ' + current_round_per_question_payout + ' CLAM (QuestionID: ' + question['id'] + ')');
 	send_announcement(question['question']);
+	current_question_timeout_id = setTimeout(function(){skip_question('5 minutes passed without correct answer.')}, 300000);
 	current_round_awaiting_answer = true;
 }
 
@@ -345,6 +357,7 @@ function check_answer(sender_uid, sender_name, answer) {
 				current_round_winners[current_round_winners.length] = sender_uid;
 				current_round_awaiting_answer = false;
 				current_round_question_number = current_round_question_number + 1;
+				clearTimeout(current_question_timeout_id);
 				console.log('answer correct');
 				console.log(current_round_question_number);
 				
@@ -382,7 +395,7 @@ function save_current_round_to_db() {
 	
 	var questions_json = jsonify_string_array(question_ids);
 	var winners_json = jsonify_string_array(current_round_winners);
-	var total_payout = current_round_per_question_payout * current_round_questions.length;
+	var total_payout = current_round_per_question_payout * current_round_winners.length;
 	total_payout = total_payout.toString();
 	
 	db.run('INSERT INTO Round(questions, winners, private, buyin, payout, commission) VALUES(\'' + questions_json + '\', \'' + winners_json + '\', 0, \'0\', \'' + total_payout + '\', \'0\')')
@@ -580,6 +593,7 @@ function send_private_message(recipient_uid, message) {
 function send_announcement(message) {
 	var txt = '/me ' + message;	
 	send_public_message(txt);
+	// send_private_message('359200', message);
 }
 
 function classify_and_handle_chat(txt, date) {
