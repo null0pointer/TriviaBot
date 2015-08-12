@@ -129,7 +129,7 @@ function update_balance(data) {
 			unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
         });
 		
-		actual_balance = parseFloat(balance) - unclaimed_amount;
+		actual_balance = tidy(parseFloat(balance) - unclaimed_amount);
 	});
 }
 
@@ -610,6 +610,20 @@ function tell_user_top_donors(recipient_uid) {
 	});
 }
 
+function tell_user_unclaimed_earnings(recipient_uid) {
+	db.all("SELECT amount FROM Earning WHERE claimed = 0", function (err, rows) {
+		var unclaimed_amount = 0;
+		
+		rows.forEach(function (row) {
+			unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
+        });
+		
+		unclaimed_amount = tidy(unclaimed_amount);
+		
+		send_private_message(recipient_uid, 'There are currently ' + unclaimed_amount + ' CLAM in unclaimed earnings.');
+	});
+}
+
 function receive_tip(sender_uid, sender_name, amount, announce) {
 	if (announce === true) {
 		var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
@@ -749,7 +763,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/report [q/u] <id>\'');
+			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/unclaimed\', \'/report [q/u] <id>\'');
 			break;
 		
 		case '/info':
@@ -793,6 +807,10 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			send_private_message(sender_uid, actual_balance + ' CLAM');
 			break;
 			
+		case '/unclaimed':
+			tell_user_unclaimed_earnings(sender_uid);
+			break;
+			
 		case '/man':
 			if (commands.length >= 2) {
 				switch (commands[1]) {
@@ -834,6 +852,11 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					case '/balance':
 					case 'balance':
 						send_private_message(sender_uid, 'Find out how big the bots bankroll is.');
+						break;
+						
+					case '/unclaimed':
+					case 'unclaimed':
+						send_private_message(sender_uid, 'Find out how much the bot owes.');
 						break;
 				
 					case '/man':
