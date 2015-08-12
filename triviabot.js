@@ -4,6 +4,8 @@ Array.prototype.contains = function(element){
 
 var env = require('./env.json');
 
+var DEBUG = false;
+
 var USER_STATE_DEFAULT = 'DEFAULT';
 var USER_STATE_AUTHORING_QUESTION = 'AUTHORING QUESTION';
 var USER_STATE_AUTHORING_ANSWER = 'AUTHORING ANSWER';
@@ -35,8 +37,10 @@ var current_round_awaiting_answer = false;
 var current_round_question_number;
 var current_round_winners;
 var current_round_answered_question_authors;
+var current_round_answered_question_answer_times;
 
 var current_question_timeout_id;
+var current_question_ask_time;
 
 var request = require('request');
 var url = "https://just-dice.com";
@@ -61,6 +65,10 @@ if (!exists) {
 	});
 }
 
+db.serialize(function() {
+	db.run('CREATE TABLE IF NOT EXISTS Earning(id INTEGER PRIMARY KEY ASC, recipient TEXT, amount TEXT, claimed INTEGER)');
+});
+
 load_mods_admins_banned();
 login_then_run_bot();
 
@@ -69,6 +77,7 @@ var version = '0.1.5',
     csrf,
     uid,
     balance,
+	actual_balance,
     max_profit,
     base, factor, steps, martingale = false, martingale_delay = 10,
     bet_in_progress,
@@ -107,6 +116,20 @@ function load_mods_admins_banned() {
 				banned[banned.length] = row.uid;
 			}
 		});
+	});
+}
+
+function update_balance(data) {
+	balance = data;
+	db.all("SELECT amount FROM Earning WHERE claimed = 0", function (err, rows) {
+		
+		var unclaimed_amount = 0;
+		
+		rows.forEach(function (row) {
+			unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
+        });
+		
+		actual_balance = parseFloat(balance) - unclaimed_amount;
 	});
 }
 
@@ -275,7 +298,8 @@ function load_round() {
 	current_round_winners = new Array();
 	current_round_eligible = new Array();
 	current_round_answered_question_authors = new Array();
-	current_round_per_question_payout = tidy((parseFloat(balance) * 0.01) / (number_of_questions + 2));
+	current_round_answered_question_answer_times = new Array();
+	current_round_per_question_payout = tidy((parseFloat(actual_balance) * 0.01) / (number_of_questions + 2));
 	
 	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
 		rows.forEach(function (row) {
@@ -330,6 +354,7 @@ function ask_next_question() {
 	console.log(question['question']);
 	send_announcement('Question ' + (current_round_question_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author'] + ' for ' + current_round_per_question_payout + ' CLAM (QuestionID: ' + question['id'] + ')');
 	send_announcement(question['question']);
+	current_question_ask_time = (new Date).getTime();
 	current_question_timeout_id = setTimeout(function(){skip_question('5 minutes passed without correct answer.')}, 300000);
 	current_round_awaiting_answer = true;
 }
@@ -350,14 +375,16 @@ function check_answer(sender_uid, sender_name, answer) {
 	
 	if (answer_correct) {
 		// if (current_round_eligible.contains(sender_uid)) {
-			if (sender_uid === question['author']) {
-				send_private_message(sender_uid, 'You answered the question correctly but you cannot answer your own question.');
-			} else if (current_round_winners.contains(sender_uid)) {
-				send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
-			} else {
+			// if (sender_uid === question['author']) {
+			// 	send_private_message(sender_uid, 'You answered the question correctly but you cannot answer your own question.');
+			// } else if (current_round_winners.contains(sender_uid)) {
+			// 	send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
+			// } else {
 				send_announcement('(' + sender_uid + ') <' + sender_name + '> answered correctly with \'' + answer + '\'');
 				current_round_winners[current_round_winners.length] = sender_uid;
 				current_round_answered_question_authors[current_round_answered_question_authors.length] = question['author'];
+				var current_time = (new Date).getTime();
+				current_round_answered_question_answer_times[current_round_answered_question_answer_times.length] = (current_time - current_question_ask_time);
 				current_round_awaiting_answer = false;
 				current_round_question_number = current_round_question_number + 1;
 				clearTimeout(current_question_timeout_id);
@@ -366,12 +393,16 @@ function check_answer(sender_uid, sender_name, answer) {
 				
 				if (current_round_question_number < current_round_questions.length) {
 					send_announcement('Next question in 1 minute.');
-					setTimeout(ask_next_question, 60000);
-					// ask_next_question();
+					
+					if (DEBUG) {
+						ask_next_question();
+					} else {
+						setTimeout(ask_next_question, 60000);
+					}
 				} else {
 					finish_round();
 				}
-			}
+			// }
 		// } else {
 		// 	send_private_message(sender_uid, 'You answered the question correctly but are not eligible for this round. Type \'/msg ' + uid + ' rules\' to see eligibility requirements.');
 		// }
@@ -383,7 +414,7 @@ function finish_round() {
 	current_round_running = false;
 	send_announcement('The round is over, congratulations to all our winners!');
 	payout_current_round_winners();
-	payout_question_authors();
+	add_question_author_earnings();
 	payout_round_commission();
 	save_current_round_to_db();
 }
@@ -392,8 +423,8 @@ function payout_current_round_winners() {
 	send_multi_tip(current_round_winners, current_round_per_question_payout, 'each');
 }
 
-function payout_question_authors() {
-	var amount = tidy(parseFloat(current_round_per_question_payout) / current_round_questions.length);
+function add_question_author_earnings() {
+	var amount = parseFloat(current_round_per_question_payout) / current_round_questions.length;
 	for (i = 0; i < current_round_answered_question_authors.length; i++) {
 		var recipient_uid = current_round_answered_question_authors[i];
 		
@@ -401,7 +432,12 @@ function payout_question_authors() {
 			recipient_uid = '359200';
 		}
 		
-		send_tip(recipient_uid, true, amount, 'Your question was used by TriviaBot');
+		var base_amount = (0.1 * amount);
+		var variable_amount = (0.9 * amount * (current_round_answered_question_answer_times[i] / 300000));
+		var adjusted_amount = tidy(base_amount + variable_amount);
+		console.log(recipient_uid + ': ' + adjusted_amount);
+		
+		db.run('INSERT INTO Earning(recipient, amount, claimed) VALUES(\'' + recipient_uid + '\', \'' + adjusted_amount + '\', \'0\')');
 	}
 }
 
@@ -498,12 +534,22 @@ function tell_user_my_details(recipient_uid) {
 		db.all("SELECT COUNT(*) AS count FROM Question WHERE author = \'" + recipient_uid + "\'", function (err, rows) {
 			var question_count = rows[0]['count'];
 			
-			send_private_message(recipient_uid, 'You have donated ' + donated_amount + ' CLAM and contributed ' + question_count + ' questions.');
-			if (question_count > 0) {
-				send_private_message(recipient_uid, 'You are eligible to win prizes.');
-			} else {
-				send_private_message(recipient_uid, 'You are not eligible to win prizes. Type \'/rules\' to find out how to become eligible');
-			}
+			db.all("SELECT amount FROM Earning WHERE recipient = \'" + recipient_uid + "\' AND claimed = 0", function (err, rows) {
+				
+				var unclaimed_amount = 0;
+				
+				rows.forEach(function (row) {
+					unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
+		        });
+				
+				send_private_message(recipient_uid, 'You have donated ' + donated_amount + ' CLAM and contributed ' + question_count + ' questions.');
+				send_private_message(recipient_uid, 'You have ' + unclaimed_amount + ' CLAM in unclaimed question earnings.');
+				if (question_count > 0) {
+					send_private_message(recipient_uid, 'You are eligible to win prizes.');
+				} else {
+					send_private_message(recipient_uid, 'You are not eligible to win prizes. Type \'/rules\' to find out how to become eligible');
+				}
+			});
 		});
 	});
 }
@@ -576,8 +622,12 @@ function receive_tip(sender_uid, sender_name, amount, announce) {
 function send_tip(recipient_uid, private_tip, amount, message) {
 	var private_arg = (private_tip) ? 'private ' : '';
 	var tip = '/tip noconf ' + private_arg + recipient_uid + ' ' + amount + ' \"' + message + '\"';
-	send_public_message(tip);
-	// send_private_message('359200', tip);
+	
+	if (DEBUG) {
+		send_private_message('359200', tip);
+	} else {
+		send_public_message(tip);
+	}
 }
 
 function send_multi_tip(recipients, amount, each_split) {
@@ -588,8 +638,12 @@ function send_multi_tip(recipients, amount, each_split) {
 		}
 		var tip = '/tip noconf ' + recipients_list + ' ' + amount + ' ' + each_split;
 		console.log(tip);
-		send_public_message(tip);
-		// send_private_message('359200', tip);
+		
+		if (DEBUG) {
+			send_private_message('359200', tip);
+		} else {
+			send_public_message(tip);
+		}
 	}
 }
 
@@ -618,9 +672,13 @@ function send_private_message(recipient_uid, message) {
 }
 
 function send_announcement(message) {
-	var txt = '/me ' + message;	
-	send_public_message(txt);
-	// send_private_message('359200', message);
+	var txt = '/me ' + message;
+	
+	if (DEBUG) {
+		send_private_message('359200', message);
+	} else {
+		send_public_message(txt);
+	}
 }
 
 function classify_and_handle_chat(txt, date) {
@@ -732,7 +790,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 			
 		case '/balance':
-			send_private_message(sender_uid, balance + ' CLAM');
+			send_private_message(sender_uid, actual_balance + ' CLAM');
 			break;
 			
 		case '/man':
@@ -1123,7 +1181,7 @@ function run_bot(cookie) {
             //   wdaddr: '' }
 
             csrf = data.csrf;
-            balance = data.balance;
+			update_balance(data.balance);
             max_profit = data.max_profit;
 			my_uid = uid;
             console.log('### CONNECTED as (' + uid + ') <' + data.name + '> ###');
@@ -1178,7 +1236,7 @@ function run_bot(cookie) {
     });
 
     socket.on('balance', function(data) {
-        balance = data;
+		update_balance(data)
     });
 
     socket.on('disconnect', function() {
