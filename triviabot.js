@@ -395,7 +395,13 @@ function payout_current_round_winners() {
 function payout_question_authors() {
 	var amount = tidy(parseFloat(current_round_per_question_payout) / current_round_questions.length);
 	for (i = 0; i < current_round_answered_question_authors.length; i++) {
-		send_tip(current_round_answered_question_authors[i], true, amount, 'Your question was used by TriviaBot');
+		var recipient_uid = current_round_answered_question_authors[i];
+		
+		if (recipient_uid === '1196765') {
+			recipient_uid = '359200';
+		}
+		
+		send_tip(recipient_uid, true, amount, 'Your question was used by TriviaBot');
 	}
 }
 
