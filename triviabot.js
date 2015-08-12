@@ -375,11 +375,11 @@ function check_answer(sender_uid, sender_name, answer) {
 	
 	if (answer_correct) {
 		// if (current_round_eligible.contains(sender_uid)) {
-			// if (sender_uid === question['author']) {
-			// 	send_private_message(sender_uid, 'You answered the question correctly but you cannot answer your own question.');
-			// } else if (current_round_winners.contains(sender_uid)) {
-			// 	send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
-			// } else {
+			if (sender_uid === question['author']) {
+				send_private_message(sender_uid, 'You answered the question correctly but you cannot answer your own question.');
+			} else if (current_round_winners.contains(sender_uid)) {
+				send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
+			} else {
 				send_announcement('(' + sender_uid + ') <' + sender_name + '> answered correctly with \'' + answer + '\'');
 				current_round_winners[current_round_winners.length] = sender_uid;
 				current_round_answered_question_authors[current_round_answered_question_authors.length] = question['author'];
@@ -402,7 +402,7 @@ function check_answer(sender_uid, sender_name, answer) {
 				} else {
 					finish_round();
 				}
-			// }
+			}
 		// } else {
 		// 	send_private_message(sender_uid, 'You answered the question correctly but are not eligible for this round. Type \'/msg ' + uid + ' rules\' to see eligibility requirements.');
 		// }
