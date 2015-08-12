@@ -624,6 +624,27 @@ function tell_user_unclaimed_earnings(recipient_uid) {
 	});
 }
 
+function claim_question_earnings(recipient_uid) {
+	db.all("SELECT amount FROM Earning WHERE recipient = \'" + recipient_uid + "\' AND claimed = 0", function (err, rows) {
+		
+		var unclaimed_amount = 0;
+		
+		rows.forEach(function (row) {
+			unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
+        });
+		
+		unclaimed_amount = tidy(unclaimed_amount);
+		
+		if (unclaimed_amount > 0) {
+			db.run('UPDATE Earning SET claimed = 1 WHERE recipient = ' + recipient_uid);
+			send_tip(recipient_uid, true, unclaimed_amount, 'TriviaBot question earnings withdrawal');
+			send_private_message(recipient_uid, 'Earnings withdrawn.');
+		} else {
+			send_private_message(recipient_uid, 'You have no unclaimed earnings.');
+		}
+	});
+}
+
 function receive_tip(sender_uid, sender_name, amount, announce) {
 	if (announce === true) {
 		var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
@@ -763,7 +784,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/unclaimed\', \'/report [q/u] <id>\'');
+			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/unclaimed\', \'/claim\', \'/report [q/u] <id>\'');
 			break;
 		
 		case '/info':
@@ -809,6 +830,10 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			
 		case '/unclaimed':
 			tell_user_unclaimed_earnings(sender_uid);
+			break;
+			
+		case '/claim':
+			claim_question_earnings(sender_uid);
 			break;
 			
 		case '/man':
@@ -857,6 +882,11 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					case '/unclaimed':
 					case 'unclaimed':
 						send_private_message(sender_uid, 'Find out how much the bot owes.');
+						break;
+						
+					case '/claim':
+					case 'claim':
+						send_private_message(sender_uid, 'Claim your question earnings.');
 						break;
 				
 					case '/man':
