@@ -466,6 +466,7 @@ function tell_user_question_details(recipient_uid, question_uid) {
 			if (row.banned != 0) {
 				send_private_message(recipient_uid, 'BANNED QUESTION');
 			}
+			send_private_message(recipient_uid, 'Author: ' + row.author);
 			send_private_message(recipient_uid, row.question);
 			send_private_message(recipient_uid, row.answers);
 		});
