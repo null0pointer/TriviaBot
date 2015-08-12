@@ -576,8 +576,8 @@ function receive_tip(sender_uid, sender_name, amount, announce) {
 function send_tip(recipient_uid, private_tip, amount, message) {
 	var private_arg = (private_tip) ? 'private ' : '';
 	var tip = '/tip noconf ' + private_arg + recipient_uid + ' ' + amount + ' \"' + message + '\"';
-	// send_public_message(tip);
-	send_private_message('359200', tip);
+	send_public_message(tip);
+	// send_private_message('359200', tip);
 }
 
 function send_multi_tip(recipients, amount, each_split) {
