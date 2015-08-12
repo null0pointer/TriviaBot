@@ -542,6 +542,8 @@ function tell_user_my_details(recipient_uid) {
 					unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
 		        });
 				
+				unclaimed_amount = tidy(unclaimed_amount);
+				
 				send_private_message(recipient_uid, 'You have donated ' + donated_amount + ' CLAM and contributed ' + question_count + ' questions.');
 				send_private_message(recipient_uid, 'You have ' + unclaimed_amount + ' CLAM in unclaimed question earnings.');
 				if (question_count > 0) {
