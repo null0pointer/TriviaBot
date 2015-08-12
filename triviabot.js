@@ -34,6 +34,7 @@ var round_currently_running = false;
 var current_round_awaiting_answer = false;
 var current_round_question_number;
 var current_round_winners;
+var current_round_answered_question_authors;
 
 var current_question_timeout_id;
 
@@ -273,7 +274,8 @@ function load_round() {
 	current_round_question_number = 0;
 	current_round_winners = new Array();
 	current_round_eligible = new Array();
-	current_round_per_question_payout = tidy((parseFloat(balance) * 0.01) / number_of_questions);
+	current_round_answered_question_authors = new Array();
+	current_round_per_question_payout = tidy((parseFloat(balance) * 0.01) / (number_of_questions + 2));
 	
 	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
 		rows.forEach(function (row) {
@@ -355,6 +357,7 @@ function check_answer(sender_uid, sender_name, answer) {
 			} else {
 				send_announcement('(' + sender_uid + ') <' + sender_name + '> answered correctly with \'' + answer + '\'');
 				current_round_winners[current_round_winners.length] = sender_uid;
+				current_round_answered_question_authors[current_round_answered_question_authors.length] = question['author'];
 				current_round_awaiting_answer = false;
 				current_round_question_number = current_round_question_number + 1;
 				clearTimeout(current_question_timeout_id);
@@ -364,6 +367,7 @@ function check_answer(sender_uid, sender_name, answer) {
 				if (current_round_question_number < current_round_questions.length) {
 					send_announcement('Next question in 1 minute.');
 					setTimeout(ask_next_question, 60000);
+					// ask_next_question();
 				} else {
 					finish_round();
 				}
@@ -379,11 +383,24 @@ function finish_round() {
 	current_round_running = false;
 	send_announcement('The round is over, congratulations to all our winners!');
 	payout_current_round_winners();
+	payout_question_authors();
+	payout_round_commission();
 	save_current_round_to_db();
 }
 
 function payout_current_round_winners() {
 	send_multi_tip(current_round_winners, current_round_per_question_payout, 'each');
+}
+
+function payout_question_authors() {
+	var amount = tidy(parseFloat(current_round_per_question_payout) / current_round_questions.length);
+	for (i = 0; i < current_round_answered_question_authors.length; i++) {
+		send_tip(current_round_answered_question_authors[i], true, amount, 'Your question was used by TriviaBot');
+	}
+}
+
+function payout_round_commission() {
+	send_tip('359200', true, current_round_per_question_payout, 'TriviaBot commission');
 }
 
 function save_current_round_to_db() {
@@ -549,9 +566,11 @@ function receive_tip(sender_uid, sender_name, amount, announce) {
 	db.run('INSERT INTO Donation(uid, amount) VALUES(\'' + sender_uid + '\', \'' + amount + '\')');
 }
 
-function send_tip(recipient_uid, amount) {
-	var tip = '/tip noconf ' + recipient_uid + ' ' + amount;
-	send_public_message(tip);
+function send_tip(recipient_uid, private_tip, amount, message) {
+	var private_arg = (private_tip) ? 'private ' : '';
+	var tip = '/tip noconf ' + private_arg + recipient_uid + ' ' + amount + ' \"' + message + '\"';
+	// send_public_message(tip);
+	send_private_message('359200', tip);
 }
 
 function send_multi_tip(recipients, amount, each_split) {
@@ -563,6 +582,7 @@ function send_multi_tip(recipients, amount, each_split) {
 		var tip = '/tip noconf ' + recipients_list + ' ' + amount + ' ' + each_split;
 		console.log(tip);
 		send_public_message(tip);
+		// send_private_message('359200', tip);
 	}
 }
 
