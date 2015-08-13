@@ -28,7 +28,6 @@ setInterval(emit_chat_message, 100);
 // CURRENT ROUND
 var current_round_number;
 var current_round_questions;
-var current_round_eligible;
 
 var current_round_per_question_payout;
 
@@ -296,7 +295,6 @@ function load_round() {
 	current_round_questions = new Array();
 	current_round_question_number = 0;
 	current_round_winners = new Array();
-	current_round_eligible = new Array();
 	current_round_answered_question_authors = new Array();
 	current_round_answered_question_answer_times = new Array();
 	current_round_per_question_payout = tidy((parseFloat(actual_balance) * 0.01) / (number_of_questions + 2));
@@ -315,14 +313,8 @@ function load_round() {
 		db.all("SELECT COUNT(*) AS count FROM Round", function (err, rows) {
 			current_round_number = rows[0]['count'] + 1;
 
-			db.all("SELECT DISTINCT author FROM Question WHERE banned = 0", function(err, rows) {
-				rows.forEach(function (row) {
-					current_round_eligible[current_round_eligible.length] = row.author;
-		        });
+			begin_round();
 
-				begin_round();
-
-			});
 		});
 	});
 }
@@ -330,7 +322,6 @@ function load_round() {
 function begin_round() {
 	console.log('beginning round');
 	console.log(current_round_questions);
-	console.log(current_round_eligible);
 	
 	send_announcement('Beginning Round No. ' + current_round_number);
 	send_announcement('You MUST answer questions in a private message to the bot. (ie. \'/msg ' + uid + ' <answer>\')');
@@ -374,38 +365,34 @@ function check_answer(sender_uid, sender_name, answer) {
 	}
 	
 	if (answer_correct) {
-		// if (current_round_eligible.contains(sender_uid)) {
-			if (sender_uid === question['author']) {
-				send_private_message(sender_uid, 'You answered the question correctly but you cannot answer your own question.');
-			} else if (current_round_winners.contains(sender_uid)) {
-				send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
-			} else {
-				send_announcement('(' + sender_uid + ') <' + sender_name + '> answered correctly with \'' + answer + '\'');
-				current_round_winners[current_round_winners.length] = sender_uid;
-				current_round_answered_question_authors[current_round_answered_question_authors.length] = question['author'];
-				var current_time = (new Date).getTime();
-				current_round_answered_question_answer_times[current_round_answered_question_answer_times.length] = (current_time - current_question_ask_time);
-				current_round_awaiting_answer = false;
-				current_round_question_number = current_round_question_number + 1;
-				clearTimeout(current_question_timeout_id);
-				console.log('answer correct');
-				console.log(current_round_question_number);
+		if (sender_uid === question['author']) {
+			send_private_message(sender_uid, 'You answered the question correctly but you cannot answer your own question.');
+		} else if (current_round_winners.contains(sender_uid)) {
+			send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
+		} else {
+			send_announcement('(' + sender_uid + ') <' + sender_name + '> answered correctly with \'' + answer + '\'');
+			current_round_winners[current_round_winners.length] = sender_uid;
+			current_round_answered_question_authors[current_round_answered_question_authors.length] = question['author'];
+			var current_time = (new Date).getTime();
+			current_round_answered_question_answer_times[current_round_answered_question_answer_times.length] = (current_time - current_question_ask_time);
+			current_round_awaiting_answer = false;
+			current_round_question_number = current_round_question_number + 1;
+			clearTimeout(current_question_timeout_id);
+			console.log('answer correct');
+			console.log(current_round_question_number);
+			
+			if (current_round_question_number < current_round_questions.length) {
+				send_announcement('Next question in 1 minute.');
 				
-				if (current_round_question_number < current_round_questions.length) {
-					send_announcement('Next question in 1 minute.');
-					
-					if (DEBUG) {
-						ask_next_question();
-					} else {
-						setTimeout(ask_next_question, 60000);
-					}
+				if (DEBUG) {
+					ask_next_question();
 				} else {
-					finish_round();
+					setTimeout(ask_next_question, 60000);
 				}
+			} else {
+				finish_round();
 			}
-		// } else {
-		// 	send_private_message(sender_uid, 'You answered the question correctly but are not eligible for this round. Type \'/msg ' + uid + ' rules\' to see eligibility requirements.');
-		// }
+		}
 	}
 }
 
@@ -546,11 +533,6 @@ function tell_user_my_details(recipient_uid) {
 				
 				send_private_message(recipient_uid, 'You have donated ' + donated_amount + ' CLAM and contributed ' + question_count + ' questions.');
 				send_private_message(recipient_uid, 'You have ' + unclaimed_amount + ' CLAM in unclaimed question earnings.');
-				if (question_count > 0) {
-					send_private_message(recipient_uid, 'You are eligible to win prizes.');
-				} else {
-					send_private_message(recipient_uid, 'You are not eligible to win prizes. Type \'/rules\' to find out how to become eligible');
-				}
 			});
 		});
 	});
@@ -786,7 +768,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/rules\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/unclaimed\', \'/claim\', \'/report [q/u] <id>\'');
+			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/unclaimed\', \'/claim\', \'/report [q/u] <id>\'');
 			break;
 		
 		case '/info':
@@ -796,10 +778,6 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 		case '/author':
 			user_states[sender_uid] = USER_STATE_AUTHORING_QUESTION;
 			send_private_message(sender_uid, 'Submit your new trivia question as a private message. Once your question is received you will be asked for the answer(s). Type \'/guidelines\' to see the question guidelines. Type \'/cancel\' to cancel authoring. Type \'/delete\' to delete last answer.');
-			break;
-			
-		case '/rules':
-			send_private_message(sender_uid, 'You must author at least one question to be eligible for trivia contests.');
 			break;
 		
 		case '/me':
