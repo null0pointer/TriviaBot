@@ -940,8 +940,10 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 			
 		default:
-			if (current_round_awaiting_answer) {
-				check_answer(sender_uid, sender_name, message);
+			if(round_currently_running) {
+				if (current_round_awaiting_answer) {
+					check_answer(sender_uid, sender_name, message);
+				}
 			} else {
 				send_private_message(sender_uid, 'Unknown command. Type \'/help\' for a list of available commands.');
 			}
