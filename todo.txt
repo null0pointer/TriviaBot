@@ -1,3 +1,8 @@
+# Fix the respond during round bug
+# Say the incorrect answers after a question.
+# add a /user command for mods
+# make /questions show the number banned
+------- TEST RUN -------
 # Ban users
 # Make DB migration utility for the app.
 # Sanitise command inputs

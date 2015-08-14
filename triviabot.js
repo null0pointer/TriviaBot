@@ -444,7 +444,7 @@ function save_current_round_to_db() {
 	var total_payout = current_round_per_question_payout * current_round_winners.length;
 	total_payout = total_payout.toString();
 	
-	db.run('INSERT INTO Round(questions, winners, private, buyin, payout, commission) VALUES(\'' + questions_json + '\', \'' + winners_json + '\', 0, \'0\', \'' + total_payout + '\', \'0\')')
+	db.run('INSERT INTO Round(questions, winners, private, buyin, payout, commission) VALUES(\'' + questions_json + '\', \'' + winners_json + '\', 0, \'0\', \'' + total_payout + '\', \'' + current_round_per_question_payout + '\')')
 }
 
 function log_chat_message(log) {
