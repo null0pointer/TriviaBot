@@ -1,5 +1,4 @@
 # Say the incorrect answers after a question.
-# make /questions show the number banned
 ------- TEST RUN -------
 # Ban users
 # Make DB migration utility for the app.

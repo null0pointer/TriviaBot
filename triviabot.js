@@ -505,7 +505,11 @@ function tell_user_question_details(recipient_uid, question_uid) {
 function tell_user_number_of_questions(recipient_uid) {
 	db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 0", function (err, rows) {
 		var question_count = rows[0]['count'];
-		send_private_message(recipient_uid, 'The bot currently knows ' + question_count + ' questions.');
+		db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 1", function (err, rows) {
+			var banned_count = rows[0]['count'];
+
+			send_private_message(recipient_uid, 'The bot currently knows ' + question_count + ' questions with ' + banned_count + ' banned questions (' + (question_count + banned_count) + ' total).');
+		});
 	});
 }
 
