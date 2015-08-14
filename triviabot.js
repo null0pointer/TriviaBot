@@ -291,7 +291,7 @@ function load_round() {
 	
 	var number_of_questions = 5;
 	
-	current_round_running = true;
+	round_currently_running = true;
 	current_round_questions = new Array();
 	current_round_question_number = 0;
 	current_round_winners = new Array();
@@ -398,7 +398,7 @@ function check_answer(sender_uid, sender_name, answer) {
 
 function finish_round() {
 	console.log('finishing round');
-	current_round_running = false;
+	round_currently_running = false;
 	send_announcement('The round is over, congratulations to all our winners!');
 	payout_current_round_winners();
 	add_question_author_earnings();
