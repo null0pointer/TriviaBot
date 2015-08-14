@@ -40,6 +40,7 @@ var current_round_answered_question_answer_times;
 
 var current_question_timeout_id;
 var current_question_ask_time;
+var current_question_incorrect_responses;
 
 var request = require('request');
 var url = "https://just-dice.com";
@@ -338,9 +339,19 @@ function skip_question(reason) {
 	setTimeout(ask_next_question, 60000);
 }
 
+function announce_incorrect_responses() {
+	console.log('incorrect answers: ' + current_question_incorrect_responses);
+	if (current_question_incorrect_responses.length > 0) {
+		send_announcement('Incorrect responses: ' + current_question_incorrect_responses);
+	} else {
+		send_announcement('No incorrect responses.');
+	}
+}
+
 function ask_next_question() {
 	console.log('asking question');
 	var question = current_round_questions[current_round_question_number];
+	current_question_incorrect_responses = new Array();
 	console.log('Question ' + (current_round_question_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author'] + ' for ' + current_round_per_question_payout + ' CLAM (QuestionID: ' + question['id'] + ')');
 	console.log(question['question']);
 	send_announcement('Question ' + (current_round_question_number + 1) + ' of ' + current_round_questions.length + ' authored by ' + question['author'] + ' for ' + current_round_per_question_payout + ' CLAM (QuestionID: ' + question['id'] + ')');
@@ -365,9 +376,9 @@ function check_answer(sender_uid, sender_name, answer) {
 	}
 	
 	if (answer_correct) {
-		if (sender_uid === question['author']) {
+		if (sender_uid === question['author'] && DEBUG == false) {
 			send_private_message(sender_uid, 'You answered the question correctly but you cannot answer your own question.');
-		} else if (current_round_winners.contains(sender_uid)) {
+		} else if (current_round_winners.contains(sender_uid) && DEBUG == false) {
 			send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
 		} else {
 			send_announcement('(' + sender_uid + ') <' + sender_name + '> answered correctly with \'' + answer + '\'');
@@ -385,13 +396,23 @@ function check_answer(sender_uid, sender_name, answer) {
 				send_announcement('Next question in 1 minute.');
 				
 				if (DEBUG) {
-					ask_next_question();
+					setTimeout(ask_next_question, 5000);
 				} else {
 					setTimeout(ask_next_question, 60000);
 				}
 			} else {
 				finish_round();
 			}
+			
+			if (DEBUG) {
+				announce_incorrect_responses();
+			} else {
+				setTimeout(announce_incorrect_responses, 15000);
+			}
+		}
+	} else {
+		if (!current_question_incorrect_responses.contains(answer)) {
+			current_question_incorrect_responses[current_question_incorrect_responses.length] = answer;
 		}
 	}
 }
