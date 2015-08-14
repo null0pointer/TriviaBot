@@ -23,6 +23,8 @@ var authoring_answers = new Array();
 var pending_chat_messages = new Array();
 var last_chat_message_time = 0;
 
+var donated_amount_since_last_round = 0;
+
 setInterval(emit_chat_message, 100);
 
 // CURRENT ROUND
@@ -70,6 +72,7 @@ db.serialize(function() {
 });
 
 load_mods_admins_banned();
+load_donations_since_last_round();
 login_then_run_bot();
 
 var version = '0.1.5',
@@ -115,6 +118,22 @@ function load_mods_admins_banned() {
 			if (!banned.contains(row.uid)) {
 				banned[banned.length] = row.uid;
 			}
+		});
+	});
+}
+
+function load_donations_since_last_round() {
+	db.all("SELECT date FROM Round ORDER BY id DESC LIMIT 1", function (err, rows) {
+		var date = rows[0].date;
+		db.all("SELECT amount FROM Donation WHERE date > \'" + date + "\'", function (err, rows) {
+			var total = 0
+			
+			rows.forEach(function (row) {
+				total = total + parseFloat(row.amount);
+				console.log(row.amount);
+	        });
+			
+			donated_amount_since_last_round = tidy(total);
 		});
 	});
 }
@@ -298,7 +317,17 @@ function load_round() {
 	current_round_winners = new Array();
 	current_round_answered_question_authors = new Array();
 	current_round_answered_question_answer_times = new Array();
-	current_round_per_question_payout = tidy((parseFloat(actual_balance) * 0.01) / (number_of_questions + 2));
+	
+	// calculate payout
+	var one_percent_of_bankroll = parseFloat(actual_balance) * 0.01;
+	var total_payout = one_percent_of_bankroll;
+	if ((donated_amount_since_last_round - 2) > total_payout) {
+		total_payout = donated_amount_since_last_round - 2;
+	}
+	
+	// the total payout is either 1% of bankroll or the amount tipped minus 2 CLAM since last round. whichever is larger.
+	current_round_per_question_payout = tidy(total_payout / (number_of_questions + 2));
+	donated_amount_since_last_round = 0;
 	
 	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
 		rows.forEach(function (row) {
@@ -655,12 +684,32 @@ function claim_question_earnings(recipient_uid) {
 }
 
 function receive_tip(sender_uid, sender_name, amount, announce) {
-	if (announce === true) {
-		var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
-		send_announcement(announcement);
-	}
+	donated_amount_since_last_round = parseFloat(donated_amount_since_last_round);
+	console.log(typeof donated_amount_since_last_round + '   ' + donated_amount_since_last_round);
+	console.log(typeof amount + '   ' + amount);
+	donated_amount_since_last_round = parseFloat(donated_amount_since_last_round) + parseFloat(amount);
+	console.log(typeof donated_amount_since_last_round + '   ' + donated_amount_since_last_round);
+	
 	log_donation(sender_uid, amount);
 	db.run('INSERT INTO Donation(uid, amount) VALUES(\'' + sender_uid + '\', \'' + amount + '\')');
+	
+	if (donated_amount_since_last_round >= 1) {
+		if (announce === true) {
+			var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
+			send_announcement(announcement);
+		}
+
+		if (!round_currently_running) {
+			load_round();
+			send_private_message(sender_uid, 'Starting round.');
+		}
+		
+	} else {
+		if (announce === true) {
+			var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation! ' + tidy(1.0 - donated_amount_since_last_round) + ' CLAM needed for next round.';
+			send_announcement(announcement);
+		}
+	}
 }
 
 function send_tip(recipient_uid, private_tip, amount, message) {
@@ -793,11 +842,15 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\', \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/unclaimed\', \'/claim\', \'/report [q/u] <id>\'');
+			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\' \'/next\',, \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/unclaimed\', \'/claim\', \'/report [q/u] <id>\'');
 			break;
 		
 		case '/info':
 			send_private_message(sender_uid, 'TriviaBot is a bot for automating trivia contests where CLAMs are awarded for correct answers. My creator is (359200) <null>.');
+			break;
+			
+		case '/next':
+			send_private_message(sender_uid, tidy(1.0 - donated_amount_since_last_round) + ' CLAM needed until next round.');
 			break;
 			
 		case '/author':
@@ -852,6 +905,11 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					case '/info':
 					case 'info':
 						send_private_message(sender_uid, 'Find out more information about this bot.');
+						break;
+						
+					case '/next':
+					case 'next':
+						send_private_message(sender_uid, 'Find out when the next round is.');
 						break;
 				
 					case '/author':
