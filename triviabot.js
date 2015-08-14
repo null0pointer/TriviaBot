@@ -509,8 +509,8 @@ function tell_user_number_of_questions(recipient_uid) {
 	});
 }
 
-function tell_user_my_details(recipient_uid) {
-	db.all("SELECT amount FROM Donation WHERE uid = \'" + recipient_uid + "\'", function(err, rows) {
+function tell_user_details(recipient_uid, user_uid) {
+	db.all("SELECT amount FROM Donation WHERE uid = \'" + user_uid + "\'", function(err, rows) {
 		
 		var donated_amount = 0;
 		
@@ -518,10 +518,10 @@ function tell_user_my_details(recipient_uid) {
 			donated_amount = donated_amount + parseFloat(row.amount);
         });
 		
-		db.all("SELECT COUNT(*) AS count FROM Question WHERE author = \'" + recipient_uid + "\'", function (err, rows) {
+		db.all("SELECT COUNT(*) AS count FROM Question WHERE author = \'" + user_uid + "\'", function (err, rows) {
 			var question_count = rows[0]['count'];
 			
-			db.all("SELECT amount FROM Earning WHERE recipient = \'" + recipient_uid + "\' AND claimed = 0", function (err, rows) {
+			db.all("SELECT amount FROM Earning WHERE recipient = \'" + user_uid + "\' AND claimed = 0", function (err, rows) {
 				
 				var unclaimed_amount = 0;
 				
@@ -781,7 +781,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 		
 		case '/me':
-			tell_user_my_details(sender_uid);
+			tell_user_details(sender_uid, sender_uid);
 			break;
 		
 		case '/donors':
@@ -933,6 +933,18 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 				} else {
 					load_round();
 					send_private_message(sender_uid, 'Starting round.');
+				}
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
+		case '/user':
+			if (admins.contains(sender_uid) || mods.contains(sender_uid)) {
+				if (commands.length > 1) {
+					tell_user_details(sender_uid, commands[1]);
+				} else {
+					send_private_message(sender_uid, 'You must provide a uid. ie. /user <uid>');
 				}
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
