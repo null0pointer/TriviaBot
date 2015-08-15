@@ -11,6 +11,10 @@ var USER_STATE_AUTHORING_QUESTION = 'AUTHORING QUESTION';
 var USER_STATE_AUTHORING_ANSWER = 'AUTHORING ANSWER';
 var USER_STATE_CONFIRMING_QUESTION_SUBMISSION = 'CONFIRMING QUESTION SUBMISSION';
 
+var MS_IN_SECOND = 1000;
+var MS_IN_MINUTE = 60000;
+var MS_IN_HOUR = 3600000;
+
 var mods = new Array();
 var admins = new Array();
 var banned = new Array();
@@ -26,6 +30,14 @@ var last_chat_message_time = 0;
 var donated_amount_since_last_round = 0;
 
 setInterval(emit_chat_message, 100);
+
+// NEXT ROUND SCHEDULER
+var next_round_timeout_id;
+var next_round_warning_timeout_id;
+
+var next_round_timeout_start_time;
+
+start_next_round_timeouts();
 
 // CURRENT ROUND
 var current_round_number;
@@ -307,7 +319,25 @@ function ban_user(id) {
 	
 }
 
+function start_next_round_timeouts() {
+	next_round_timeout_id = setTimeout(load_round, (28 * MS_IN_HOUR));
+	next_round_warning_timeout_id = setTimeout(pre_round_warning, (27.5 * MS_IN_HOUR));
+	
+	next_round_timeout_start_time = (new Date).getTime();
+}
+
+function clear_next_round_timeouts() {
+	clearTimeout(next_round_timeout_id);
+	clearTimeout(next_round_warning_timeout_id);
+}
+
+function pre_round_warning() {
+	send_announcement('Next round starting in 30 minutes. Earn CLAM when your questions are used by the bot! (\'/msg ' + uid + ' /author\')');
+}
+
 function load_round() {
+	
+	clear_next_round_timeouts();
 	
 	var number_of_questions = 5;
 	
@@ -447,6 +477,7 @@ function check_answer(sender_uid, sender_name, answer) {
 }
 
 function finish_round() {
+	start_next_round_timeouts();
 	console.log('finishing round');
 	round_currently_running = false;
 	send_announcement('The round is over, congratulations to all our winners!');
@@ -667,6 +698,23 @@ function tell_user_unclaimed_earnings(recipient_uid) {
 	});
 }
 
+function tell_user_next_round(recipient_uid) {
+	if (round_currently_running) {
+		send_private_message(recipient_uid, 'Round currently running.');
+		return;
+	}
+	
+	var current_time = (new Date).getTime();
+	var time_remaining = (28 * MS_IN_HOUR) - (current_time - next_round_timeout_start_time);
+	var hours = Math.floor(time_remaining / MS_IN_HOUR);
+	time_remaining = time_remaining - (hours * MS_IN_HOUR);
+	var minutes = Math.floor(time_remaining / MS_IN_MINUTE);
+	time_remaining = time_remaining - (minutes * MS_IN_MINUTE);
+	var seconds = Math.floor(time_remaining / MS_IN_SECOND);
+	
+	send_private_message(recipient_uid, 'Next round in ' + hours + 'h ' + minutes + 'm ' + seconds + 's or start it now by tipping ' + tidy(1.0 - donated_amount_since_last_round) + ' CLAM.');
+}
+
 function claim_question_earnings(recipient_uid) {
 	db.all("SELECT amount FROM Earning WHERE recipient = \'" + recipient_uid + "\' AND claimed = 0", function (err, rows) {
 		
@@ -864,7 +912,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 			
 		case '/next':
-			send_private_message(sender_uid, tidy(1.0 - donated_amount_since_last_round) + ' CLAM needed until next round.');
+			tell_user_next_round(sender_uid);
 			break;
 			
 		case '/author':
