@@ -575,18 +575,23 @@ function tell_user_details(recipient_uid, user_uid) {
 		db.all("SELECT COUNT(*) AS count FROM Question WHERE author = \'" + user_uid + "\'", function (err, rows) {
 			var question_count = rows[0]['count'];
 			
-			db.all("SELECT amount FROM Earning WHERE recipient = \'" + user_uid + "\' AND claimed = 0", function (err, rows) {
+			db.all("SELECT amount, claimed FROM Earning WHERE recipient = \'" + user_uid + "\'", function (err, rows) {
 				
 				var unclaimed_amount = 0;
+				var total_amount = 0;
 				
 				rows.forEach(function (row) {
-					unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
+					total_amount = total_amount + parseFloat(row.amount);
+					if (row.claimed == 0) {
+						unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
+					}
 		        });
 				
 				unclaimed_amount = tidy(unclaimed_amount);
+				total_amount = tidy(total_amount);
 				
 				send_private_message(recipient_uid, 'You have donated ' + donated_amount + ' CLAM and contributed ' + question_count + ' questions.');
-				send_private_message(recipient_uid, 'You have ' + unclaimed_amount + ' CLAM in unclaimed question earnings.');
+				send_private_message(recipient_uid, 'You have ' + unclaimed_amount + ' CLAM unclaimed out of ' + total_amount + ' CLAM in total question earnings.');
 			});
 		});
 	});
