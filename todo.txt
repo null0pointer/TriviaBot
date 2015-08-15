@@ -1,5 +1,4 @@
 # fix bug where bot messages the guy who tipped that the round is starting
-# fix bug where tips don't work with amounts with no decimal
 # set up editing
 # set up mod tools
 # Ban users

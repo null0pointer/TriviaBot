@@ -718,6 +718,11 @@ function receive_tip(sender_uid, sender_name, amount, announce) {
 }
 
 function send_tip(recipient_uid, private_tip, amount, message) {
+	// in the case the amount is an integer, the /tip command needs a decimal point in the amount
+	if (amount.indexOf('.') === -1) {
+		amount = amount + '.0';
+	}
+	
 	var private_arg = (private_tip) ? 'private ' : '';
 	var tip = '/tip noconf ' + private_arg + recipient_uid + ' ' + amount + ' \"' + message + '\"';
 	
@@ -729,6 +734,11 @@ function send_tip(recipient_uid, private_tip, amount, message) {
 }
 
 function send_multi_tip(recipients, amount, each_split) {
+	// in the case the amount is an integer, the /tip command needs a decimal point in the amount
+	if (amount.indexOf('.') === -1) {
+		amount = amount + '.0';
+	}
+	
 	if (recipients.length > 0) {
 		var recipients_list = recipients[0];
 		for (i = 1; i < recipients.length; i++) {
