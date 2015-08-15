@@ -1,4 +1,3 @@
-# fix bug where bot messages the guy who tipped that the round is starting
 # set up editing
 # set up mod tools
 # Ban users

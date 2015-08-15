@@ -706,7 +706,6 @@ function receive_tip(sender_uid, sender_name, amount, announce) {
 
 		if (!round_currently_running) {
 			load_round();
-			send_private_message(sender_uid, 'Starting round.');
 		}
 		
 	} else {
