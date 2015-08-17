@@ -244,11 +244,17 @@ function validate_address(addr) {
 }
 
 function validate_integer(num) {
-    if (num === undefined)
-        throw new Error("missing required integer");
+    if (num === undefined) {
+        console.log("missing required integer");
+		return false;
+	}
 
-    if (!num.match(/^[1-9][0-9]*$/))
-        throw new Error("number should have nothing other than digits in it");
+    if (!num.match(/^[1-9][0-9]*$/)) {
+        console.log("number should have nothing other than digits in it");
+		return false;
+	}
+	
+	return true;
 }
 
 function validate_number(num) {
@@ -572,14 +578,22 @@ function log_donation(donor_uid, amount) {
 
 function tell_user_question_details(recipient_uid, question_uid) {
 	db.all("SELECT * FROM Question WHERE id = \'" + question_uid + "\'", function(err, rows) {
-		rows.forEach(function (row) {
-			if (row.banned != 0) {
-				send_private_message(recipient_uid, 'BANNED QUESTION');
-			}
-			send_private_message(recipient_uid, 'Author: ' + row.author);
-			send_private_message(recipient_uid, row.question);
-			send_private_message(recipient_uid, row.answers);
-		});
+		if (rows.length == 0) {
+			send_private_message(recipient_uid, 'Question not found.');
+		} else {
+			rows.forEach(function (row) {
+				if (row.author === recipient_uid || admins.contains(recipient_uid)) {
+					if (row.banned != 0) {
+						send_private_message(recipient_uid, 'BANNED QUESTION');
+					}
+					send_private_message(recipient_uid, 'Author: ' + row.author);
+					send_private_message(recipient_uid, row.question);
+					send_private_message(recipient_uid, row.answers);
+				} else {
+					send_private_message(recipient_uid, 'You do not have permission to read this question.');
+				}
+			});
+		}
 	});
 }
 
@@ -943,7 +957,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	switch (commands[0]) {
 		case '/help':
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /questions, /balance, /unclaimed, /claim, /report [q/u] <id>');
+			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /questions, /read, /edit, /balance, /unclaimed, /claim, /report [q/u] <id>');
 			break;
 		
 		case '/info':
@@ -981,6 +995,19 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			
 		case '/questions':
 			tell_user_number_of_questions(sender_uid);
+			break;
+			
+		case '/read':
+			if (commands.length > 1) {
+				var quid = commands[1];
+				if (validate_integer(quid)) {
+					tell_user_question_details(sender_uid, quid);
+				} else {
+					send_private_message(sender_uid, 'Invalid question id.');
+				}
+			} else {
+				send_private_message(sender_uid, 'Usage: /read <question id>');
+			}
 			break;
 			
 		case '/balance':
@@ -1085,14 +1112,6 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					send_private_message(sender_uid, 'Modded ' +  commands[1]);
 					send_private_message(commands[1], 'You have been made a mod of TriviaBot by ' + sender_uid);
 				}
-			} else {
-				send_private_message(sender_uid, 'You do not have permission for this.');
-			}
-			break;
-			
-		case '/read':
-			if (admins.contains(sender_uid)) {
-				tell_user_question_details(sender_uid, commands[1]);
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
 			}
