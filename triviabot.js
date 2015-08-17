@@ -351,12 +351,12 @@ function load_round() {
 	// calculate payout
 	var one_percent_of_bankroll = parseFloat(actual_balance) * 0.01;
 	var total_payout = one_percent_of_bankroll;
-	if ((donated_amount_since_last_round - 2) > total_payout) {
-		total_payout = donated_amount_since_last_round - 2;
+	if ((donated_amount_since_last_round - 1) > total_payout) {
+		total_payout = donated_amount_since_last_round - 1;
 	}
 	
 	// the total payout is either 1% of bankroll or the amount tipped minus 2 CLAM since last round. whichever is larger.
-	current_round_per_question_payout = tidy(total_payout / (number_of_questions + 2));
+	current_round_per_question_payout = tidy(total_payout / (number_of_questions + 1));
 	donated_amount_since_last_round = 0;
 	
 	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
@@ -483,7 +483,6 @@ function finish_round() {
 	send_announcement('The round is over, congratulations to all our winners!');
 	payout_current_round_winners();
 	add_question_author_earnings();
-	payout_round_commission();
 	save_current_round_to_db();
 }
 
@@ -507,10 +506,6 @@ function add_question_author_earnings() {
 		
 		db.run('INSERT INTO Earning(recipient, amount, claimed) VALUES(\'' + recipient_uid + '\', \'' + adjusted_amount + '\', \'0\')');
 	}
-}
-
-function payout_round_commission() {
-	send_tip('359200', true, current_round_per_question_payout, 'TriviaBot commission');
 }
 
 function save_current_round_to_db() {
