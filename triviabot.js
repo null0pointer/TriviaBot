@@ -346,7 +346,7 @@ function load_round() {
 	
 	round_currently_running = true;
 	current_round_questions = new Array();
-	current_round_question_number = 0;
+	current_round_question_number = -1; // it gets incremented straight away
 	current_round_winners = new Array();
 	current_round_answered_question_authors = new Array();
 	current_round_answered_question_answer_times = new Array();
@@ -413,6 +413,7 @@ function announce_incorrect_responses() {
 }
 
 function ask_next_question() {
+	current_round_question_number = current_round_question_number + 1;
 	console.log('asking question');
 	var question = current_round_questions[current_round_question_number];
 	current_question_incorrect_responses = new Array();
@@ -452,12 +453,9 @@ function check_answer(sender_uid, sender_name, answer) {
 			var current_time = (new Date).getTime();
 			current_round_answered_question_answer_times[current_round_answered_question_answer_times.length] = (current_time - current_question_ask_time);
 			current_question_answered = true;
-			current_round_question_number = current_round_question_number + 1;
 			clearTimeout(current_question_timeout_id);
-			console.log('answer correct');
-			console.log(current_round_question_number);
 			
-			if (current_round_question_number < current_round_questions.length) {
+			if ((current_round_question_number + 1) /* don't actually want to increment it yet */ < current_round_questions.length) {
 				send_announcement('Next question in 1 minute.');
 				
 				if (DEBUG) {
