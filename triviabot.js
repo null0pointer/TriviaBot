@@ -57,6 +57,7 @@ var current_round_answered_question_answer_times;
 var current_question_timeout_id;
 var current_question_ask_time;
 var current_question_incorrect_responses;
+var current_question_answered;
 
 var request = require('request');
 var url = "https://just-dice.com";
@@ -401,6 +402,8 @@ function skip_question(reason) {
 }
 
 function announce_incorrect_responses() {
+	current_round_awaiting_answer = false;
+	
 	console.log('incorrect answers: ' + current_question_incorrect_responses);
 	if (current_question_incorrect_responses.length > 0) {
 		send_announcement('Incorrect responses: ' + current_question_incorrect_responses);
@@ -420,6 +423,7 @@ function ask_next_question() {
 	current_question_ask_time = (new Date).getTime();
 	current_question_timeout_id = setTimeout(function(){skip_question('5 minutes passed without correct answer.')}, 300000);
 	current_round_awaiting_answer = true;
+	current_question_answered = false;
 }
 
 function check_answer(sender_uid, sender_name, answer) {
@@ -441,13 +445,13 @@ function check_answer(sender_uid, sender_name, answer) {
 			send_private_message(sender_uid, 'You answered the question correctly but you cannot answer your own question.');
 		} else if (current_round_winners.contains(sender_uid) && DEBUG == false) {
 			send_private_message(sender_uid, 'You answered the question correctly but to keep it fair and fun you can only win once per round.');
-		} else {
+		} else if (current_question_answered == false) {
 			send_announcement('(' + sender_uid + ') <' + sender_name + '> answered correctly with \'' + answer + '\'');
 			current_round_winners[current_round_winners.length] = sender_uid;
 			current_round_answered_question_authors[current_round_answered_question_authors.length] = question['author'];
 			var current_time = (new Date).getTime();
 			current_round_answered_question_answer_times[current_round_answered_question_answer_times.length] = (current_time - current_question_ask_time);
-			current_round_awaiting_answer = false;
+			current_question_answered = true;
 			current_round_question_number = current_round_question_number + 1;
 			clearTimeout(current_question_timeout_id);
 			console.log('answer correct');
@@ -462,7 +466,8 @@ function check_answer(sender_uid, sender_name, answer) {
 					setTimeout(ask_next_question, 60000);
 				}
 			} else {
-				finish_round();
+				// 16s so that it happens after the incorect answers for the last question are announced.
+				setTimeout(finish_round, 16000);
 			}
 			
 			if (DEBUG) {
