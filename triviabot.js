@@ -604,6 +604,16 @@ function tell_user_number_of_questions(recipient_uid) {
 			var banned_count = rows[0]['count'];
 
 			send_private_message(recipient_uid, 'The bot currently knows ' + question_count + ' questions with ' + banned_count + ' banned questions (' + (question_count + banned_count) + ' total).');
+			
+			db.all("SELECT id FROM Question WHERE author = \'" + recipient_uid + "\' ORDER BY id", function (err, rows) {
+				var question_ids = new Array();
+				
+				rows.forEach(function (row) {
+					question_ids[question_ids.length] = row.id;
+		        });
+				
+				send_private_message(recipient_uid, 'Your questions: ' + question_ids);
+			});
 		});
 	});
 }
