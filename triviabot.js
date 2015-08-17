@@ -15,6 +15,8 @@ var MS_IN_SECOND = 1000;
 var MS_IN_MINUTE = 60000;
 var MS_IN_HOUR = 3600000;
 
+var HOURS_BETWEEN_ROUNDS = 20;
+
 var mods = new Array();
 var admins = new Array();
 var banned = new Array();
@@ -320,8 +322,8 @@ function ban_user(id) {
 }
 
 function start_next_round_timeouts() {
-	next_round_timeout_id = setTimeout(load_round, (28 * MS_IN_HOUR));
-	next_round_warning_timeout_id = setTimeout(pre_round_warning, (27.5 * MS_IN_HOUR));
+	next_round_timeout_id = setTimeout(load_round, (HOURS_BETWEEN_ROUNDS * MS_IN_HOUR));
+	next_round_warning_timeout_id = setTimeout(pre_round_warning, ((HOURS_BETWEEN_ROUNDS - 0.5) * MS_IN_HOUR));
 	
 	next_round_timeout_start_time = (new Date).getTime();
 }
@@ -700,7 +702,7 @@ function tell_user_next_round(recipient_uid) {
 	}
 	
 	var current_time = (new Date).getTime();
-	var time_remaining = (28 * MS_IN_HOUR) - (current_time - next_round_timeout_start_time);
+	var time_remaining = (HOURS_BETWEEN_ROUNDS * MS_IN_HOUR) - (current_time - next_round_timeout_start_time);
 	var hours = Math.floor(time_remaining / MS_IN_HOUR);
 	time_remaining = time_remaining - (hours * MS_IN_HOUR);
 	var minutes = Math.floor(time_remaining / MS_IN_MINUTE);
