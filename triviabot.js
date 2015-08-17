@@ -616,7 +616,7 @@ function tell_user_number_of_questions(recipient_uid) {
 					var questions_string = question_ids[0];
 					
 					for (i = 1; i < question_ids.length; i++) {
-						questions_string = ', ' + question_ids[i];
+						questions_string = questions_string + ', ' + question_ids[i];
 					}
 				
 					send_private_message(recipient_uid, 'Your questions: ' + questions_string);
