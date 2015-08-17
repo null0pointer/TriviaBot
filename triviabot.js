@@ -812,25 +812,62 @@ function emit_chat_message() {
 	}
 }
 
-function send_public_message(message) {
+// 256 Character Limit (including commands)
+
+function add_message_to_queue(message) {
 	pending_chat_messages[pending_chat_messages.length] = message;
 }
 
+function send_public_message(message) {
+	if (message.length <= 256) {
+		add_message_to_queue(message);
+	} else {
+		var message_extra = message.substring(256, message.length);
+		message = message.substring(0, 256);
+		add_message_to_queue(message);
+		send_public_message(message_extra);
+	}
+}
+
 function send_private_message(recipient_uid, message) {
-	var txt = '/msg ' + recipient_uid + ' ' + message;
-	send_public_message(txt);
+	var command_prefix = '/msg ' + recipient_uid + ' ';
+	if (command_prefix.length + message.length <= 256) {
+		var txt = command_prefix + message;
+		add_message_to_queue(txt);
+	} else {
+		var message_extra = message.substring((256 - command_prefix.length), message.length);
+		message = message.substring(0, (256 - command_prefix.length));
+		var txt = command_prefix + message;
+		add_message_to_queue(txt);
+		send_private_message(recipient_uid, message_extra);
+	}
 	
 	var date = new Date();
 	log_sent_private_message(recipient_uid, message, date);
 }
 
 function send_announcement(message) {
-	var txt = '/me ' + message;
-	
-	if (DEBUG) {
-		send_private_message('359200', message);
+	var command_prefix = '/me ';
+	if (command_prefix.length + message.length <= 256) {
+		var txt = command_prefix + message;
+
+		if (DEBUG) {
+			send_private_message('359200', message);
+		} else {
+			add_message_to_queue(txt);
+		}
 	} else {
-		send_public_message(txt);
+		var message_extra = message.substring((256 - command_prefix.length), message.length);
+		message = message.substring(0, (256 - command_prefix.length));
+		var txt = command_prefix + message;
+		
+		if (DEBUG) {
+			send_private_message('359200', message);
+		} else {
+			add_message_to_queue(txt);
+		}
+		
+		send_announcement(message_extra);
 	}
 }
 
@@ -902,7 +939,8 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: \'/man <command>\' (for more info on a command), \'/info\' \'/next\',, \'/author\', \'/me\', \'/donors\', \'/questions\', \'/balance\', \'/unclaimed\', \'/claim\', \'/report [q/u] <id>\'');
+		case '/help':
+			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /questions, /balance, /unclaimed, /claim, /report [q/u] <id>');
 			break;
 		
 		case '/info':
@@ -915,7 +953,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			
 		case '/author':
 			user_states[sender_uid] = USER_STATE_AUTHORING_QUESTION;
-			send_private_message(sender_uid, 'Submit your new trivia question as a private message. Once your question is received you will be asked for the answer(s). Type \'/guidelines\' to see the question guidelines. Type \'/cancel\' to cancel authoring. Type \'/delete\' to delete last answer.');
+			send_private_message(sender_uid, 'Submit your new trivia question as a private message. Once your question is received you will be asked for the answer(s). Type /guidelines to see the question guidelines. Type /cancel to cancel authoring. Type /delete to delete last answer.');
 			break;
 		
 		case '/me':
@@ -1018,11 +1056,11 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 						break;
 					
 					default:
-						send_private_message(sender_uid, 'Unknown command \'' + commands[1] + '\'. Type \'/help\' for a list of available commands.');
+						send_private_message(sender_uid, 'Unknown command \'' + commands[1] + '\'. Type /help for a list of available commands.');
 						break;
 				}
 			} else {
-				send_private_message(sender_uid, 'No command provided. Type \'/man <command>\' to find out more about a command.');
+				send_private_message(sender_uid, 'No command provided. Type /man <command> to find out more about a command.');
 			}
 			break;
 			
@@ -1100,7 +1138,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					check_answer(sender_uid, sender_name, message);
 				}
 			} else {
-				send_private_message(sender_uid, 'Unknown command. Type \'/help\' for a list of available commands.');
+				send_private_message(sender_uid, 'Unknown command. Type /help for a list of available commands.');
 			}
 			break;
 	}
@@ -1158,7 +1196,7 @@ function handle_private_message_authoring(sender_uid, message) {
 }
 
 function handle_private_message_authoring_question(sender_uid, message) {
-	send_private_message(sender_uid, 'Your question has been received. Please submit each accepted answer as a separate private message. Once you have entered all accepted answers type \'/done\'.');
+	send_private_message(sender_uid, 'Your question has been received. Please submit each accepted answer as a separate private message. Once you have entered all accepted answers type /done.');
 	user_states[sender_uid] = USER_STATE_AUTHORING_ANSWER;
 	authoring_questions[sender_uid] = message;
 	authoring_answers[sender_uid] = new Array();
@@ -1191,12 +1229,12 @@ function handle_private_message_confirming_question_submission(sender_uid, messa
 		case '/no':	
 		case 'n':
 		case 'no':
-			send_private_message(sender_uid, 'Please submit each accepted answer as a separate private message. Once you have entered all accepted answers type \'done\'. Your question currently has ' + authoring_answers[sender_uid].length + ' answers.');
+			send_private_message(sender_uid, 'Please submit each accepted answer as a separate private message. Once you have entered all accepted answers type /done. Your question currently has ' + authoring_answers[sender_uid].length + ' answers.');
 			user_states[sender_uid] = USER_STATE_AUTHORING_ANSWER;
 			break;
 			
 		default:
-			send_private_message(sender_uid, 'Please respond with either \'yes\' or \'no\'.');
+			send_private_message(sender_uid, 'Please respond with either yes or no.');
 			break;
 	}
 	
