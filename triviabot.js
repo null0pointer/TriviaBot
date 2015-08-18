@@ -600,7 +600,7 @@ function tell_user_question_details(recipient_uid, question_uid) {
 	});
 }
 
-function tell_user_number_of_questions(recipient_uid) {
+function tell_user_number_of_questions(recipient_uid, questions_uid) {
 	db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 0", function (err, rows) {
 		var question_count = rows[0]['count'];
 		db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 1", function (err, rows) {
@@ -608,7 +608,7 @@ function tell_user_number_of_questions(recipient_uid) {
 
 			send_private_message(recipient_uid, 'The bot currently knows ' + question_count + ' questions with ' + banned_count + ' banned questions (' + (question_count + banned_count) + ' total).');
 			
-			db.all("SELECT id FROM Question WHERE author = \'" + recipient_uid + "\' ORDER BY id", function (err, rows) {
+			db.all("SELECT id FROM Question WHERE author = \'" + questions_uid + "\' ORDER BY id", function (err, rows) {
 				var question_ids = new Array();
 				
 				rows.forEach(function (row) {
@@ -997,7 +997,16 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 		
 		case '/me':
-			tell_user_details(sender_uid, sender_uid);
+			if (commands.length > 1 && admins.contains(sender_uid)) {
+				var uid = commands[1];
+				if (validate_integer(uid)) {
+					tell_user_details(sender_uid, uid);
+				} else {
+					send_private_message(sender_uid, 'Invalid user id.');
+				}
+			} else {
+				tell_user_details(sender_uid, sender_uid);
+			}
 			break;
 		
 		case '/donors':
@@ -1017,7 +1026,16 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 			
 		case '/questions':
-			tell_user_number_of_questions(sender_uid);
+			if (commands.length > 1 && admins.contains(sender_uid)) {
+				var uid = commands[1];
+				if (validate_integer(uid)) {
+					tell_user_number_of_questions(sender_uid, uid);
+				} else {
+					send_private_message(sender_uid, 'Invalid user id.');
+				}
+			} else {
+				tell_user_number_of_questions(sender_uid, sender_uid);
+			}
 			break;
 			
 		case '/read':
@@ -1166,18 +1184,6 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 				} else {
 					load_round();
 					send_private_message(sender_uid, 'Starting round.');
-				}
-			} else {
-				send_private_message(sender_uid, 'You do not have permission for this.');
-			}
-			break;
-			
-		case '/user':
-			if (admins.contains(sender_uid) || mods.contains(sender_uid)) {
-				if (commands.length > 1) {
-					tell_user_details(sender_uid, commands[1]);
-				} else {
-					send_private_message(sender_uid, 'You must provide a uid. ie. /user <uid>');
 				}
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
