@@ -340,8 +340,11 @@ function clear_next_round_timeouts() {
 	clearTimeout(next_round_warning_timeout_id);
 }
 
-function pre_round_warning() {
-	send_announcement('Next round starting in 30 minutes. Earn CLAM when your questions are used by the bot! (\'/msg ' + uid + ' /author\')');
+function pre_round_warning(minutes) {
+	if (minutes === undefined)
+		send_announcement('Next round starting in 30 minutes. Earn CLAM when your questions are used by the bot! (\'/msg ' + uid + ' /author\')');
+	else
+		send_announcement('Next round starting in ' + minutes + ' minutes. Earn CLAM when your questions are used by the bot! (\'/msg ' + uid + ' /author\')');
 }
 
 function load_round() {
@@ -1153,6 +1156,13 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 		case '/start_round':
 			if (admins.contains(sender_uid) || mods.contains(sender_uid)) {
 				if (commands.length > 1) {
+					var minutes = commands[1];
+					if (validate_integer(minutes)) {
+						pre_round_warning(minutes);
+						setTimeout(load_round, (minutes * MS_IN_MINUTE));
+					} else {
+						send_private_message(sender_uid, 'Invalid delay length.');
+					}
 				} else {
 					load_round();
 					send_private_message(sender_uid, 'Starting round.');
