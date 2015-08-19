@@ -1,3 +1,4 @@
+# add custom rounds
 # set up editing
 # update the info command to include info about how tips and payouts work
 # set up mod tools

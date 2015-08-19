@@ -405,8 +405,8 @@ function skip_question(reason) {
 	console.log('skipping question: ' + reason);
 	send_announcement('Skipping question: ' + reason);
 	current_round_awaiting_answer = false;
-	current_round_question_number = current_round_question_number + 1;
 	send_announcement('Next question in 1 minute.');
+	setTimeout(announce_incorrect_responses, 15000);
 	setTimeout(ask_next_question, 60000);
 }
 
