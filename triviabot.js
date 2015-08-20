@@ -729,7 +729,11 @@ function tell_user_top_authors(recipient_uid) {
 		var rank = 1;
 		
 		rows.forEach(function (row) {
-			authors_string = authors_string + rank + '. ' + row.author + ' (' + row.count + ' questions) ';
+			var author = row.author;
+			if (recipient_uid === author) {
+				author = 'You';
+			}
+			authors_string = authors_string + rank + '. ' + author + ' (' + row.count + ' q\'s) ';
 			rank = rank + 1;
 		});
 		
