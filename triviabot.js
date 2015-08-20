@@ -722,6 +722,21 @@ function tell_user_top_donors(recipient_uid) {
 	});
 }
 
+function tell_user_top_authors(recipient_uid) {
+	db.all("SELECT author, COUNT(author) as count FROM Question GROUP BY author ORDER BY COUNT(author) DESC LIMIT 10", function(err, rows) {
+		
+		var authors_string = '';
+		var rank = 1;
+		
+		rows.forEach(function (row) {
+			authors_string = authors_string + rank + '. ' + row.author + ' (' + row.count + ' questions) ';
+			rank = rank + 1;
+		});
+		
+		send_private_message(recipient_uid, authors_string);
+	});
+}
+
 function tell_user_unclaimed_earnings(recipient_uid) {
 	db.all("SELECT amount FROM Earning WHERE claimed = 0", function (err, rows) {
 		var unclaimed_amount = 0;
@@ -980,7 +995,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	switch (commands[0]) {
 		case '/help':
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /questions, /read, /edit, /balance, /unclaimed, /claim, /report [q/u] <id>');
+			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /authors, /questions, /read, /edit, /balance, /unclaimed, /claim, /report [q/u] <id>');
 			break;
 		
 		case '/info':
@@ -1011,6 +1026,10 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 		
 		case '/donors':
 			tell_user_top_donors(sender_uid);
+			break;
+			
+		case '/authors':
+			tell_user_top_authors(sender_uid);
 			break;
 			
 		case '/report':
@@ -1094,6 +1113,11 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					case '/donors':
 					case 'donors':
 						send_private_message(sender_uid, 'See a list of people who have funded the trivia.');
+						break;
+						
+					case '/authors':
+					case 'authors':
+						send_private_message(sender_uid, 'See a list of the top authors.');
 						break;
 					
 					case '/report':
