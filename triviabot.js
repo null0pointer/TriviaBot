@@ -730,12 +730,15 @@ function tell_user_top_authors(recipient_uid) {
 		
 		rows.forEach(function (row) {
 			var author = row.author;
-			if (recipient_uid === author) {
-				author = 'You';
-			}
-			authors_string = authors_string + rank + '. ' + author + ' (' + row.count + ' q\'s) ';
+			// if (recipient_uid === author) {
+			// 	author = 'You';
+			// }
+			authors_string = authors_string + '#' + rank + ': ' + author + ' (' + row.count + ') - ';
 			rank = rank + 1;
 		});
+		
+		// cut the extra ' - ' off
+		authors_string = authors_string.substring(0, (authors_string.length - 3));
 		
 		send_private_message(recipient_uid, authors_string);
 	});
