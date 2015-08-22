@@ -545,6 +545,22 @@ function save_current_round_to_db() {
 	total_payout = total_payout.toString();
 	
 	db.run('INSERT INTO Round(questions, winners, private, buyin, payout, commission) VALUES(\'' + questions_json + '\', \'' + winners_json + '\', 0, \'0\', \'' + total_payout + '\', \'' + current_round_per_question_payout + '\')')
+	
+	for (i = 0; i < question_ids.length; i++) {
+		increment_times_used_for_question(question_ids[i]);
+	}
+}
+
+function increment_times_used_for_question(question_uid) {
+	db.all("SELECT times_used FROM Question WHERE id = \'" + question_uid + "\'", function(err, rows) {
+		rows.forEach(function (row) {
+			var times = row.times_used;
+			if (times == null) {
+				times = 0;
+			}
+			db.run('UPDATE Question SET times_used = ' + (times + 1) + ' WHERE id = ' + question_uid);
+		});
+	});
 }
 
 function log_chat_message(log) {
