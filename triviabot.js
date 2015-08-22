@@ -328,11 +328,18 @@ function ban_user(id) {
 	
 }
 
-function start_next_round_timeouts() {
-	next_round_timeout_id = setTimeout(load_round, (HOURS_BETWEEN_ROUNDS * MS_IN_HOUR));
-	next_round_warning_timeout_id = setTimeout(pre_round_warning, ((HOURS_BETWEEN_ROUNDS - 0.5) * MS_IN_HOUR));
+function start_next_round_timeouts(minutes) {
+	if (minutes === undefined) {
+		next_round_timeout_id = setTimeout(load_round, (HOURS_BETWEEN_ROUNDS * MS_IN_HOUR));
+		next_round_warning_timeout_id = setTimeout(pre_round_warning, ((HOURS_BETWEEN_ROUNDS - 0.5) * MS_IN_HOUR));
 	
-	next_round_timeout_start_time = (new Date).getTime();
+		next_round_timeout_start_time = (new Date).getTime();
+	} else {
+		minutes = parseInt(minutes);
+	
+		next_round_timeout_id = setTimeout(load_round, (minutes * MS_IN_MINUTE));
+		next_round_timeout_start_time = (new Date).getTime();
+	}
 }
 
 function clear_next_round_timeouts() {
@@ -348,6 +355,9 @@ function pre_round_warning(minutes) {
 }
 
 function load_round() {
+	if (round_currently_running) {
+		return;
+	}
 	
 	clear_next_round_timeouts();
 	
@@ -1208,7 +1218,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					var minutes = commands[1];
 					if (validate_integer(minutes)) {
 						pre_round_warning(minutes);
-						setTimeout(load_round, (minutes * MS_IN_MINUTE));
+						start_next_round_timeouts(minutes);
 					} else {
 						send_private_message(sender_uid, 'Invalid delay length.');
 					}
