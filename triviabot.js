@@ -1185,6 +1185,15 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			}
 			break;
 			
+		case '/add_column':
+			if (admins.contains(sender_uid)) {
+				db.run('ALTER TABLE ' + commands[1] + ' ADD COLUMN ' + commands[2] + ' ' + commands[3]);
+				send_private_message(sender_uid, 'Added column \'' + commands[2] + ' ' + commands[3] + '\' to \'' + commands[1] + '\'');
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
 		case '/mod':
 			if (admins.contains(sender_uid)) {
 				if (mods.contains(commands[1])) {
@@ -1213,7 +1222,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 			
 		case '/start_round':
-			if (admins.contains(sender_uid) || mods.contains(sender_uid)) {
+			if (admins.contains(sender_uid)) {
 				if (commands.length > 1) {
 					var minutes = commands[1];
 					if (validate_integer(minutes)) {
