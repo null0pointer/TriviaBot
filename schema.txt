@@ -6,6 +6,8 @@ Question
 	TEXT	: answers
 	INTEGER	: reports
 	INTEGER	: banned
+	INTEGER : reviewed
+	INTEGER : times_used
 	TEXT	: author
 	DATE	: date
 

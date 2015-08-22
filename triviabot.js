@@ -1355,7 +1355,7 @@ function save_new_question(author_uid) {
 	console.log(clean_question);
 	console.log(answers_string);
 	
-	db.run('INSERT INTO Question(question, answers, reports, banned, author) VALUES(\'' + clean_question + '\', \'' + answers_string + '\', \'0\', \'0\', \'' + author_uid + '\')');
+	db.run('INSERT INTO Question(question, answers, reports, banned, reviewed, times_used, author) VALUES(\'' + clean_question + '\', \'' + answers_string + '\', \'0\', \'0\', \'0\', \'0\', \'' + author_uid + '\')');
 }
 
 function login_then_run_bot() {

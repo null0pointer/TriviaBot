@@ -1,4 +1,5 @@
 # question review queue
+# schedule backups for the database (just something simple like copying the file so that it's not editing the only copy constantly)
 # add custom rounds
 # set up editing
 # update the info command to include info about how tips and payouts work
