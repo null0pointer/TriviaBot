@@ -396,16 +396,59 @@ function load_round() {
 	current_round_per_question_payout = tidy(total_payout / (number_of_questions + 1));
 	donated_amount_since_last_round = 0;
 	
-	db.all("SELECT * FROM Question WHERE banned = 0 AND reviewed = 1 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
+	db.all("SELECT * FROM Question WHERE banned = 0 AND reviewed = 1 ORDER BY RANDOM()", function(err, rows) {
+		var ids = new Array();
+		var weights = new Array();
+		var questions = new Array();
+		var total_weight = 0;
+		
 		rows.forEach(function (row) {
+			var id = row.id.toString();
 			question = new Array();
 			question['question'] = row.question;
 			question['answers'] = dejsonify_array_string(row.answers);
-			question['id'] = row.id.toString();
+			question['id'] = id;
 			question['author'] = row.author;
-
-			current_round_questions[current_round_questions.length] = question;
+			
+			questions[id] = question;
+			ids[ids.length] = id;
+			
+			var times = row.times_used;
+			if (times == null) {
+				times = 0;
+			}
+			var weight = 1 / (times + 1);
+			
+			total_weight = total_weight + weight;
+			weights[weights.length] = weight;
         });
+		
+		console.log(total_weight);
+		
+		var question_ids = new Array();
+		// TODO fix potential infinite loop when number of questions is greater than the total questions the bot knows about
+		while (question_ids.length < number_of_questions) {
+			var index = Math.random() * total_weight;
+			var id;
+			var cumulative_weight = 0;
+			
+			for (i = 0; i < weights.length; i++) {
+				cumulative_weight = cumulative_weight + weights[i];
+				if (index < cumulative_weight) {
+					id = ids[i];
+					break;
+				}
+			}
+			
+			if (!question_ids.contains(id)) {
+				question_ids[question_ids.length] = id;
+			}
+		}
+		
+		for (i = 0; i < question_ids.length; i++) {
+			console.log(questions[question_ids[i]]);
+			current_round_questions[current_round_questions.length] = questions[question_ids[i]];
+		}
 
 		db.all("SELECT COUNT(*) AS count FROM Round", function (err, rows) {
 			current_round_number = rows[0]['count'] + 1;
