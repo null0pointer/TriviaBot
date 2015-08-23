@@ -752,14 +752,14 @@ function tell_user_top_donors(recipient_uid) {
 					top_donor = donor_uids[j];
 				}
 			}
-			top_donors[i] = top_donor + ' (' + tidy(all_donors[top_donor]) + ' CLAM)';
+			top_donors[i] = top_donor + ' (' + tidy(all_donors[top_donor]) + ')';
 			donor_uids.splice(donor_uids.indexOf(top_donor), 1);
 		}
 		
 		var top_donors_string = '';
 		for (i = 0; i < top_donors.length; i++) {
-			var prefix = (i + 1) + '. ';
-			var suffix = (i === top_donors.length - 1) ? '' : ', ';
+			var prefix =  '#' + (i + 1) + ': ';
+			var suffix = (i === top_donors.length - 1) ? '' : ' ● ';
 			top_donors_string = top_donors_string + prefix + top_donors[i] + suffix;
 		}
 		
@@ -778,7 +778,7 @@ function tell_user_top_authors(recipient_uid) {
 			// if (recipient_uid === author) {
 			// 	author = 'You';
 			// }
-			authors_string = authors_string + '#' + rank + ': ' + author + ' (' + row.count + ') - ';
+			authors_string = authors_string + '#' + rank + ': ' + author + ' (' + row.count + ') ● ';
 			rank = rank + 1;
 		});
 		
