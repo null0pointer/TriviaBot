@@ -10,6 +10,8 @@ var USER_STATE_DEFAULT = 'DEFAULT';
 var USER_STATE_AUTHORING_QUESTION = 'AUTHORING QUESTION';
 var USER_STATE_AUTHORING_ANSWER = 'AUTHORING ANSWER';
 var USER_STATE_CONFIRMING_QUESTION_SUBMISSION = 'CONFIRMING QUESTION SUBMISSION';
+var USER_STATE_REVIEWING_VERDICT = 'REVIEWING VERDICT';
+var USER_STATE_REVIEWING_ANOTHER = 'REVIEWING ANOTHER';
 
 var MS_IN_SECOND = 1000;
 var MS_IN_MINUTE = 60000;
@@ -25,6 +27,9 @@ var user_states = new Array();
 
 var authoring_questions = new Array();
 var authoring_answers = new Array();
+
+var unreviewed_questions = new Array();
+var reviewing_questions = new Array();
 
 var pending_chat_messages = new Array();
 var last_chat_message_time = 0;
@@ -88,6 +93,7 @@ db.serialize(function() {
 
 load_mods_admins_banned();
 load_donations_since_last_round();
+load_unreviewed_questions();
 login_then_run_bot();
 
 var version = '0.1.5',
@@ -152,6 +158,15 @@ function load_donations_since_last_round() {
 		});
 	});
 }
+
+function load_unreviewed_questions() {
+	db.all("SELECT id FROM Question WHERE reviewed != 1 ORDER BY date DESC", function (err, rows) {
+		rows.forEach(function (row) {
+			unreviewed_questions[unreviewed_questions.length] = row.id;
+		});
+	});
+}
+
 
 function update_balance(data) {
 	balance = data;
@@ -381,7 +396,7 @@ function load_round() {
 	current_round_per_question_payout = tidy(total_payout / (number_of_questions + 1));
 	donated_amount_since_last_round = 0;
 	
-	db.all("SELECT * FROM Question WHERE banned = 0 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
+	db.all("SELECT * FROM Question WHERE banned = 0 AND reviewed = 1 ORDER BY RANDOM() LIMIT " + number_of_questions, function(err, rows) {
 		rows.forEach(function (row) {
 			question = new Array();
 			question['question'] = row.question;
@@ -611,7 +626,7 @@ function tell_user_question_details(recipient_uid, question_uid) {
 			send_private_message(recipient_uid, 'Question not found.');
 		} else {
 			rows.forEach(function (row) {
-				if (row.author === recipient_uid || admins.contains(recipient_uid)) {
+				if (row.author === recipient_uid || admins.contains(recipient_uid) || reviewing_questions[recipient_uid] === questions_uid) {
 					if (row.banned != 0) {
 						send_private_message(recipient_uid, 'BANNED QUESTION');
 					}
@@ -627,31 +642,35 @@ function tell_user_question_details(recipient_uid, question_uid) {
 }
 
 function tell_user_number_of_questions(recipient_uid, questions_uid) {
-	db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 0", function (err, rows) {
+	db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 0 AND reviewed = 1", function (err, rows) {
 		var question_count = rows[0]['count'];
-		db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 1", function (err, rows) {
+		db.all("SELECT COUNT(*) AS count FROM Question WHERE banned = 1 AND reviewed = 1", function (err, rows) {
 			var banned_count = rows[0]['count'];
-
-			send_private_message(recipient_uid, 'The bot currently knows ' + question_count + ' questions with ' + banned_count + ' banned questions (' + (question_count + banned_count) + ' total).');
 			
-			db.all("SELECT id FROM Question WHERE author = \'" + questions_uid + "\' ORDER BY id", function (err, rows) {
-				var question_ids = new Array();
+			db.all("SELECT COUNT(*) AS count FROM Question WHERE reviewed != 1", function (err, rows) {
+				var unreviewed_count = rows[0]['count'];
+
+				send_private_message(recipient_uid, 'The bot currently knows ' + question_count + ' questions with ' + banned_count + ' banned questions and ' + unreviewed_count + ' unreviewed questions (' + (question_count + banned_count + unreviewed_count) + ' total).');
+			
+				db.all("SELECT id FROM Question WHERE author = \'" + questions_uid + "\' ORDER BY id", function (err, rows) {
+					var question_ids = new Array();
 				
-				rows.forEach(function (row) {
-					question_ids[question_ids.length] = row.id;
-		        });
+					rows.forEach(function (row) {
+						question_ids[question_ids.length] = row.id;
+			        });
 				
-				if (question_ids.length > 0) {
-					var questions_string = question_ids[0];
+					if (question_ids.length > 0) {
+						var questions_string = question_ids[0];
 					
-					for (i = 1; i < question_ids.length; i++) {
-						questions_string = questions_string + ', ' + question_ids[i];
-					}
+						for (i = 1; i < question_ids.length; i++) {
+							questions_string = questions_string + ', ' + question_ids[i];
+						}
 				
-					send_private_message(recipient_uid, 'Your questions: ' + questions_string);
-				} else {
-					send_private_message(recipient_uid, 'You have written no questions.');
-				}
+						send_private_message(recipient_uid, 'Your questions: ' + questions_string);
+					} else {
+						send_private_message(recipient_uid, 'You have written no questions.');
+					}
+				});
 			});
 		});
 	});
@@ -1010,6 +1029,14 @@ function receive_private_message(sender_uid, sender_name, message, date) {
 			handle_private_message_confirming_question_submission(sender_uid, message);
 			break;
 			
+		case USER_STATE_REVIEWING_VERDICT:
+			handle_private_message_reviewing_verdict(sender_uid, message);
+			break;
+			
+		case USER_STATE_REVIEWING_ANOTHER:
+			handle_private_message_reviewing_another(sender_uid, message);
+			break;
+			
 		case undefined:
 			user_states[sender_uid] = USER_STATE_DEFAULT;
 		case USER_STATE_DEFAULT:
@@ -1027,8 +1054,13 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-		case '/help':
 			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /authors, /questions, /read, /edit, /balance, /unclaimed, /claim, /report [q/u] <id>');
+			if (mods.contains(sender_uid) || admins.contains(sender_uid)) {
+				send_private_message(sender_uid, 'Mod commands: /review');
+			}
+			if (admins.contains(sender_uid)) {
+				send_private_message(sender_uid, 'Admin commands: /sql');
+			}
 			break;
 		
 		case '/info':
@@ -1192,6 +1224,22 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			}
 			break;
 			
+		case '/review':
+			if (admins.contains(sender_uid) || mods.contains(sender_uid)) {
+				if (unreviewed_questions.length > 0) {
+					user_states[sender_uid] = USER_STATE_REVIEWING_VERDICT;
+					reviewing_questions[sender_uid] = unreviewed_questions[0];
+					unreviewed_questions.splice(0, 1);
+					send_private_message(sender_uid, 'You will be shown a question that is pending review. Answer yes to allow the bot to use the question. Answer no to ban the question. Answer skip to skip to a different question.');
+					tell_user_question_details(sender_uid, reviewing_questions[sender_uid]);
+				} else {
+					send_private_message(sender_uid, 'Nothing to review.');
+				}
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
 		case '/add_donation': // TODO: add some validation for this function it is very very injectable.
 			if (admins.contains(sender_uid)) {
 				receive_tip(commands[1], '', commands[2], false);
@@ -1251,6 +1299,19 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					load_round();
 					send_private_message(sender_uid, 'Starting round.');
 				}
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
+		case '/sql':
+			if (admins.contains(sender_uid)) {
+				var query = '';
+				for (i = 1; i < commands.length; i++) {
+					query = query + commands[i] + ' ';
+				}
+				db.run(query);
+				send_private_message(sender_uid, 'Executed: ' + query);
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
 			}
@@ -1361,7 +1422,6 @@ function handle_private_message_confirming_question_submission(sender_uid, messa
 			send_private_message(sender_uid, 'Please respond with either yes or no.');
 			break;
 	}
-	
 }
 
 function save_new_question(author_uid) {
@@ -1372,6 +1432,87 @@ function save_new_question(author_uid) {
 	console.log(answers_string);
 	
 	db.run('INSERT INTO Question(question, answers, reports, banned, reviewed, times_used, author) VALUES(\'' + clean_question + '\', \'' + answers_string + '\', \'0\', \'0\', \'0\', \'0\', \'' + author_uid + '\')');
+	
+	db.all("SELECT id FROM Question ORDER BY id DESC LIMIT 1", function (err, rows) {
+		rows.forEach(function (row) {
+			unreviewed_questions[unreviewed_questions.length] = row.id;
+		});
+	});
+}
+
+function handle_private_message_reviewing_verdict(sender_uid, message) {
+	var command = message.split(' ')[0];
+	
+	switch (command) {
+		case '/y':
+		case '/yes':
+		case 'y':
+		case 'yes':
+			db.run('UPDATE Question SET reviewed = 1 WHERE id = ' + reviewing_questions[sender_uid]);
+			reviewing_questions[sender_uid] = '0';
+			send_private_message(sender_uid, 'Question accepted. Review another?');
+			user_states[sender_uid] = USER_STATE_REVIEWING_ANOTHER;
+			break;
+		
+		case '/n':
+		case '/no':	
+		case 'n':
+		case 'no':
+			db.run('UPDATE Question SET banned = 1 WHERE id = ' + reviewing_questions[sender_uid]);
+			db.run('UPDATE Question SET reviewed = 1 WHERE id = ' + reviewing_questions[sender_uid]);
+			reviewing_questions[sender_uid] = '0';
+			send_private_message(sender_uid, 'Question banned. Review another?');
+			user_states[sender_uid] = USER_STATE_REVIEWING_ANOTHER;
+			break;
+			
+		case '/s':
+		case '/skip':	
+		case 's':
+		case 'skip':
+			unreviewed_questions[unreviewed_questions.length] = reviewing_questions[sender_uid];
+			reviewing_questions[sender_uid] = '0';
+			send_private_message(sender_uid, 'Question skipped. Review another?');
+			user_states[sender_uid] = USER_STATE_REVIEWING_ANOTHER;
+			break;
+			
+		default:
+			send_private_message(sender_uid, 'Please respond with either yes, no, or skip.');
+			break;
+	}
+}
+
+function handle_private_message_reviewing_another(sender_uid, message) {
+	var command = message.split(' ')[0];
+	
+	switch (command) {
+		case '/y':
+		case '/yes':
+		case 'y':
+		case 'yes':
+			if (unreviewed_questions.length > 0) {
+				user_states[sender_uid] = USER_STATE_REVIEWING_VERDICT;
+				reviewing_questions[sender_uid] = unreviewed_questions[0];
+				unreviewed_questions.splice(0, 1);
+				tell_user_question_details(sender_uid, reviewing_questions[sender_uid]);
+			} else {
+				user_states[sender_uid] = USER_STATE_DEFAULT;
+				send_private_message(sender_uid, 'Nothing to review.');
+				send_private_message(sender_uid, 'Thank you for taking the time to review questions.');
+			}
+			break;
+		
+		case '/n':
+		case '/no':	
+		case 'n':
+		case 'no':
+			user_states[sender_uid] = USER_STATE_DEFAULT;
+			send_private_message(sender_uid, 'Thank you for taking the time to review questions.');
+			break;
+			
+		default:
+			send_private_message(sender_uid, 'Please respond with either yes or no.');
+			break;
+	}
 }
 
 function login_then_run_bot() {
