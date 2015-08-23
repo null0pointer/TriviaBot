@@ -669,7 +669,7 @@ function tell_user_question_details(recipient_uid, question_uid) {
 			send_private_message(recipient_uid, 'Question not found.');
 		} else {
 			rows.forEach(function (row) {
-				if (row.author === recipient_uid || admins.contains(recipient_uid) || reviewing_questions[recipient_uid] === questions_uid) {
+				if (row.author === recipient_uid || admins.contains(recipient_uid) || reviewing_questions[recipient_uid] === question_uid) {
 					if (row.banned != 0) {
 						send_private_message(recipient_uid, 'BANNED QUESTION');
 					}
