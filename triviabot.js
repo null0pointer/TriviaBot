@@ -1139,6 +1139,10 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 		
 		case '/info':
 			send_private_message(sender_uid, 'TriviaBot is a bot for automating trivia contests where CLAMs are awarded for correct answers. My creator is (359200) <null>.');
+			send_private_message(sender_uid, 'The bot will run rounds either when tips to the bot accumulate to 1 CLAM or 20 hours after the most recent round.');
+			send_private_message(sender_uid, 'If the bot is started via tips the total prize for the round will be MAX(<1% of bot bankroll>, (<size of accumulated tips> - 1)). Otherwise, the total prize pool is 1% of the bots bankroll.');
+			send_private_message(sender_uid, 'This prize is divided into 6ths. 5/6ths are split evenly and are awarded to round winners. The remaining 1/6th is divided between the 5 question authors and each 1/30th is the max amount an author can earn on their question.');
+			send_private_message(sender_uid, 'If the question is answered instantly the author recieves 10% of the max. If the question is answered exactly at 5 minutes the author recieves 100% of the max. The amount the author earns scales linearly between these times.');
 			break;
 			
 		case '/next':

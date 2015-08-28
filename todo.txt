@@ -1,9 +1,8 @@
-# report feature
+# flesh out report feature. probably needs it's own table so i can track who reports what, etc.
 # batch removal of questions?
 # batch read?
 # schedule backups for the database (just something simple like copying the file so that it's not editing the only copy constantly)
 # set up editing
-# update the info command to include info about how tips and payouts work
 # Ban users
 # Make DB migration utility for the app.
 # Sanitise command inputs
