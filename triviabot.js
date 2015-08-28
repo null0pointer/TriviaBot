@@ -1121,7 +1121,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 				send_private_message(sender_uid, 'Mod commands: /review');
 			}
 			if (admins.contains(sender_uid)) {
-				send_private_message(sender_uid, 'Admin commands: /sql');
+				send_private_message(sender_uid, 'Admin commands: /sql, /sql_select');
 			}
 			break;
 		
@@ -1374,6 +1374,28 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 				}
 				db.run(query);
 				send_private_message(sender_uid, 'Executed: ' + query);
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
+		case '/sql_select':
+			if (admins.contains(sender_uid)) {
+				var query = '';
+				for (i = 1; i < commands.length; i++) {
+					query = query + commands[i] + ' ';
+				}
+				db.all(query, function (err, rows) {
+					if (rows.length > 0) {
+						rows.forEach(function (row) {
+							var msg_string = JSON.stringify(row);
+							console.log(msg_string);
+							send_private_message(sender_uid, msg_string);
+						});
+					} else {
+						send_private_message(sender_uid, 'No results.');
+					}
+				});
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
 			}
