@@ -717,7 +717,7 @@ function tell_user_number_of_questions(recipient_uid, questions_uid) {
 							rows.forEach(function (row) {
 								var weight = 1 / (row.times_used + 1);
 								total_weight = total_weight + weight;
-								if (row.author === recipient_uid) {
+								if (row.author === questions_uid) {
 									recipient_weight = recipient_weight + weight;
 								}
 							});
