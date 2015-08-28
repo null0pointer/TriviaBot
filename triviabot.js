@@ -330,8 +330,13 @@ function mod(uid) {
 	if (!mods.contains(uid)) {
 		mods[mods.length] = uid;
 		
-		// INSERT OR REPLACE INTO User (uid, mod) VALUES ('<uid>', 1)
-		db.run('INSERT OR REPLACE INTO User (uid, mod) VALUES (\'' + uid + '\', 1)');
+		db.all("SELECT * from User WHERE uid = \'" + uid + "\'", function (err, rows) {
+			if (rows.length > 0) {
+				db.run("UPDATE User SET mod = 1 WHERE uid = \'" + uid + "\'");
+			} else {
+				db.run("INSERT INTO User(uid, mod, admin, reports, banned) VALUES(\'" + uid + "\', 1, 0, 0, 0)");
+			}
+		});
 	}
 }
 

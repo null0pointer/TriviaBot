@@ -1,15 +1,12 @@
 # fix bug where mods dont save??
-# show users % chance of questions being chosen (You have a xx.xxx% chance of at least one of your questions being used) (1 - (chance of not being chosen)^5)
+# report feature
 # batch removal of questions?
 # batch read?
 # schedule backups for the database (just something simple like copying the file so that it's not editing the only copy constantly)
-# add custom rounds
 # set up editing
 # update the info command to include info about how tips and payouts work
-# set up mod tools
 # Ban users
 # Make DB migration utility for the app.
 # Sanitise command inputs
-# report feature
-# Work out round scheduling (probably just have a command for start round in x minutes)
-# Private buy-in rounds.
+# add custom rounds
+# Private buy-in rounds???
