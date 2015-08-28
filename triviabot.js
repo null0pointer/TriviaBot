@@ -710,6 +710,20 @@ function tell_user_number_of_questions(recipient_uid, questions_uid) {
 						}
 				
 						send_private_message(recipient_uid, 'Your questions: ' + questions_string);
+						
+						db.all("SELECT author, times_used FROM Question WHERE banned = 0 AND reviewed != 0", function (err, rows) {
+							var recipient_weight = 0;
+							var total_weight = 0;
+							rows.forEach(function (row) {
+								var weight = 1 / (row.times_used + 1);
+								total_weight = total_weight + weight;
+								if (row.author === recipient_uid) {
+									recipient_weight = recipient_weight + weight;
+								}
+							});
+							
+							send_private_message(recipient_uid, 'Your questions have a ' + tidy((recipient_weight/total_weight) * 100) + '% chance of being selected.');
+						});
 					} else {
 						send_private_message(recipient_uid, 'You have written no questions.');
 					}
@@ -1642,8 +1656,8 @@ function run_bot(cookie) {
 
     socket.on('error', function(err) {
         console.log('caught error:', err);
-		console.log('logging in again');
-		login_then_run_bot();
+		// console.log('logging in again');
+		// login_then_run_bot();
     });
 
     socket.on('init', function(data) {

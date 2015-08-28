@@ -1,3 +1,7 @@
+# fix bug where mods dont save??
+# show users % chance of questions being chosen (You have a xx.xxx% chance of at least one of your questions being used) (1 - (chance of not being chosen)^5)
+# batch removal of questions?
+# batch read?
 # schedule backups for the database (just something simple like copying the file so that it's not editing the only copy constantly)
 # add custom rounds
 # set up editing
