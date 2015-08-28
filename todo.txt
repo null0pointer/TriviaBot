@@ -1,4 +1,3 @@
-# fix bug where mods dont save??
 # report feature
 # batch removal of questions?
 # batch read?

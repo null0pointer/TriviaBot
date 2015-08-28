@@ -340,6 +340,18 @@ function mod(uid) {
 	}
 }
 
+function report(id) {
+	db.all("SELECT reports FROM Question WHERE id = " + id, function (err, rows) {
+		rows.forEach(function (row) {
+			var reports = row.reports;
+			if (reports == null) {
+				reports = 0;
+			}
+			db.run('UPDATE Question SET reports = ' + (reports + 1) + ' WHERE id = ' + id);
+		});
+	});
+}
+
 function ban_question(id) {
 	db.run('UPDATE Question SET banned = 1 WHERE id = ' + id);
 }
@@ -1116,7 +1128,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /authors, /questions, /read, /edit, /balance, /unclaimed, /claim, /report [q/u] <id>');
+			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /authors, /questions, /read, /edit, /balance, /unclaimed, /claim, /report <id>');
 			if (mods.contains(sender_uid) || admins.contains(sender_uid)) {
 				send_private_message(sender_uid, 'Mod commands: /review');
 			}
@@ -1160,7 +1172,17 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 			
 		case '/report':
-			send_private_message(sender_uid, 'Not implemented');
+			if (commands.length > 1) {
+				var quid = commands[1];
+				if (validate_integer(quid)) {
+					report(quid);
+					send_private_message(sender_uid, 'Reported question ' + quid);
+				} else {
+					send_private_message(sender_uid, 'Invalid question id.');
+				}
+			} else {
+				send_private_message(sender_uid, 'Usage: /report <question id>');
+			}
 			break;
 			
 		case '/mods':
@@ -1249,7 +1271,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					
 					case '/report':
 					case 'report':
-						send_private_message(sender_uid, '(Not implemented) Report users who are abusing the bot or questions which are bad. \'report u <user id>\' to report a user. \'report q <question id>\' to report a question.');
+						send_private_message(sender_uid, 'Report questions which are bad. \'report q <question id>\' to report a question.');
 						break;
 						
 					case '/questions':
