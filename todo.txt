@@ -1,3 +1,4 @@
+# add reviewer field to question so people can't answer questions they reviewed
 # flesh out report feature. probably needs it's own table so i can track who reports what, etc.
 # batch removal of questions?
 # batch read?

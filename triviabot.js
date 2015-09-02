@@ -490,9 +490,25 @@ function skip_question(reason) {
 	console.log('skipping question: ' + reason);
 	send_announcement('Skipping question: ' + reason);
 	current_round_awaiting_answer = false;
-	send_announcement('Next question in 1 minute.');
-	setTimeout(announce_incorrect_responses, 15000);
-	setTimeout(ask_next_question, 60000);
+	
+	if ((current_round_question_number + 1) /* don't actually want to increment it yet */ < current_round_questions.length) {
+		send_announcement('Next question in 1 minute.');
+		
+		if (DEBUG) {
+			setTimeout(ask_next_question, 5000);
+		} else {
+			setTimeout(ask_next_question, 60000);
+		}
+	} else {
+		// 16s so that it happens after the incorect answers for the last question are announced.
+		setTimeout(finish_round, 16000);
+	}
+	
+	if (DEBUG) {
+		announce_incorrect_responses();
+	} else {
+		setTimeout(announce_incorrect_responses, 15000);
+	}
 }
 
 function announce_incorrect_responses() {
@@ -1275,7 +1291,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					
 					case '/report':
 					case 'report':
-						send_private_message(sender_uid, 'Report questions which are bad. \'report q <question id>\' to report a question.');
+						send_private_message(sender_uid, 'Report questions which are bad. \'report <question id>\' to report a question.');
 						break;
 						
 					case '/questions':
