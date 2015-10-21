@@ -1,3 +1,4 @@
+# fix crash when deleting answers (see below) (happens when you type /author /delete)
 # add reviewer field to question so people can't answer questions they reviewed
 # flesh out report feature. probably needs it's own table so i can track who reports what, etc.
 # batch removal of questions?
@@ -9,3 +10,12 @@
 # Sanitise command inputs
 # add custom rounds
 # Private buy-in rounds???
+
+
+
+
+BELOW:
+
+if (answers.length >= 1) {
+                                   ^
+TypeError: Cannot read property 'length' of undefined
