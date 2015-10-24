@@ -71,6 +71,7 @@ var my_uid;
 var fs = require("fs");
 var db_file = "trivia.db";
 var chat_log_file = "logs/chat.log";
+var error_log_file = "logs/error.log";
 var donation_log_file = "logs/donation.log";
 var privates_log_dir = "logs/privates/";
 var exists = fs.existsSync(db_file);
@@ -652,6 +653,11 @@ function increment_times_used_for_question(question_uid) {
 			db.run('UPDATE Question SET times_used = ' + (times + 1) + ' WHERE id = ' + question_uid);
 		});
 	});
+}
+
+function log_error(log) {
+	console.log(log);
+	fs.appendFileSync(error_log_file, log + '\n');
 }
 
 function log_chat_message(log) {
@@ -1730,7 +1736,7 @@ function run_bot(cookie) {
 		
 		// ### DISCONNECTED ###
 		// caught error:   can not find session
-		console.log(JSON.stringify(err));
+		log_error(JSON.stringify(err));
     });
 
     socket.on('init', function(data) {
