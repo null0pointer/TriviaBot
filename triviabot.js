@@ -1734,6 +1734,10 @@ function run_bot(cookie) {
 		// console.log('logging in again');
 		// login_then_run_bot();
 		
+		if (err == "  can not find session") {
+			login_then_run_bot();
+		}
+		
 		// ### DISCONNECTED ###
 		// caught error:   can not find session
 		log_error(JSON.stringify(err));
