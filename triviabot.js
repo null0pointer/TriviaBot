@@ -1734,7 +1734,7 @@ function run_bot(cookie) {
 		// console.log('logging in again');
 		// login_then_run_bot();
 		
-		if (err == "  can not find session") {
+		if (JSON.stringify(err).indexOf("can not find session") > -1) {
 			login_then_run_bot();
 		}
 		
