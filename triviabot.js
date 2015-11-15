@@ -241,6 +241,30 @@ function handle_command(txt) {
                 console.log('attempting to change name to "' + txt[1] + '"');
                 socket.emit('name', csrf, txt[1]);
                 break;
+				
+			case 'sql_select':
+				var query = '';
+				for (i = 1; i < txt.length; i++) {
+					query = query + txt[i] + ' ';
+				}
+				
+				db.all(query, function (err, rows) {
+					if (err) {
+						console.log(err);
+					}
+					if (rows) {
+						if (rows.length > 0) {
+							rows.forEach(function (row) {
+								var msg_string = JSON.stringify(row);
+								console.log(msg_string);
+							});
+						} else {
+							console.log("No results.");
+						}
+					}
+				});
+				
+				break;
 
             default:
                 console.log('unknown command;', txt[0]);
@@ -1439,14 +1463,20 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					query = query + commands[i] + ' ';
 				}
 				db.all(query, function (err, rows) {
-					if (rows.length > 0) {
-						rows.forEach(function (row) {
-							var msg_string = JSON.stringify(row);
-							console.log(msg_string);
-							send_private_message(sender_uid, msg_string);
-						});
-					} else {
-						send_private_message(sender_uid, 'No results.');
+					if (err) {
+						console.log(err);
+						send_private_message(sender_uid, JSON.stringify(err));
+					}
+					if (rows) {
+						if (rows.length > 0) {
+							rows.forEach(function (row) {
+								var msg_string = JSON.stringify(row);
+								console.log(msg_string);
+								send_private_message(sender_uid, msg_string);
+							});
+						} else {
+							send_private_message(sender_uid, 'No results.');
+						}
 					}
 				});
 			} else {
