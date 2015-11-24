@@ -19,6 +19,8 @@ var MS_IN_HOUR = 3600000;
 
 var HOURS_BETWEEN_ROUNDS = 20;
 
+var error_count = 0;
+
 var mods = new Array();
 var admins = new Array();
 var banned = new Array();
@@ -1770,7 +1772,11 @@ function run_bot(cookie) {
 		// login_then_run_bot();
 		
 		if (JSON.stringify(err).indexOf("can not find session") > -1) {
-			login_then_run_bot();
+			error_count += 1;
+			if (error_count > 1) {
+				login_then_run_bot();
+				error_count = 0;
+			}
 		}
 		
 		// ### DISCONNECTED ###
@@ -1858,6 +1864,7 @@ function run_bot(cookie) {
             console.log('### RECONNECTED ###');
             // console.log('csrf was', csrf, 'and now is', data.csrf);
             csrf = data.csrf;
+			error_count = 0;
         }
     });
 
