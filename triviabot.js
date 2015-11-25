@@ -110,6 +110,7 @@ var version = '0.1.5',
 	investment,
 	total_balance,
 	earnings_owed,
+	total_staked,
     max_profit,
     base, factor, steps, martingale = false, martingale_delay = 10,
     bet_in_progress,
@@ -1233,7 +1234,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 	
 	switch (commands[0]) {
 		case '/help':
-			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /authors, /questions, /read, /edit, /balance, /unclaimed, /claim, /report <id>');
+			send_private_message(sender_uid, 'Available commands: /man <command> (for more info on a command), /info, /next, /author, /me, /donors, /authors, /questions, /read, /edit, /balance, /staked, /unclaimed, /claim, /report <id>');
 			if (mods.contains(sender_uid) || admins.contains(sender_uid)) {
 				send_private_message(sender_uid, 'Mod commands: /review');
 			}
@@ -1332,6 +1333,10 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			send_private_message(sender_uid, total_balance + ' CLAM (' + tidy(investment) + ' staking, ' + tidy(balance) + ' live balance, ' + tidy(earnings_owed) + ' earnings owed)');
 			break;
 			
+		case '/staked':
+			send_private_message(sender_uid, tidy(total_staked) + ' CLAM staked');
+			break;
+			
 		case '/unclaimed':
 			tell_user_unclaimed_earnings(sender_uid);
 			break;
@@ -1391,6 +1396,11 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 					case '/balance':
 					case 'balance':
 						send_private_message(sender_uid, 'Find out how big the bots bankroll is.');
+						break;
+						
+					case '/staked':
+					case 'staked':
+						send_private_message(sender_uid, 'See the total CLAM staked by the bot.');
 						break;
 						
 					case '/unclaimed':
@@ -1922,6 +1932,8 @@ function run_bot(cookie) {
 			balance = data.balance;
 			refresh_total_balance();
 			
+			total_staked = data.stake_pft;
+			
             max_profit = data.max_profit;
 			my_uid = uid;
             console.log('### CONNECTED as (' + uid + ') <' + data.name + '> ###');
@@ -1947,6 +1959,10 @@ function run_bot(cookie) {
     socket.on('tip', function(sender_uid, sender_name, amount, r, i) {
 		receive_tip(sender_uid, sender_name, amount, true)
     });
+	
+	socket.on('staked', function(data) {
+		total_staked = data.stake_pft;
+	});
 	
 	socket.on('result', function(result) {
 		investment = result['investment'];
