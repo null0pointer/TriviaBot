@@ -19,6 +19,8 @@ var MS_IN_HOUR = 3600000;
 
 var HOURS_BETWEEN_ROUNDS = 20;
 
+var DONATION_THRESHOLD = 1;
+
 var error_count = 0;
 
 var mods = new Array();
@@ -98,13 +100,16 @@ load_mods_admins_banned();
 load_donations_since_last_round();
 load_unreviewed_questions();
 login_then_run_bot();
+setInterval(rebalance_investment, (3 * MS_IN_HOUR));
 
 var version = '0.1.5',
     socket,
     csrf,
     uid,
     balance,
-	actual_balance,
+	investment,
+	total_balance,
+	earnings_owed,
     max_profit,
     base, factor, steps, martingale = false, martingale_delay = 10,
     bet_in_progress,
@@ -170,9 +175,7 @@ function load_unreviewed_questions() {
 	});
 }
 
-
-function update_balance(data) {
-	balance = data;
+function refresh_total_balance() {
 	db.all("SELECT amount FROM Earning WHERE claimed = 0", function (err, rows) {
 		
 		var unclaimed_amount = 0;
@@ -181,9 +184,48 @@ function update_balance(data) {
 			unclaimed_amount = unclaimed_amount + parseFloat(row.amount);
         });
 		
-		actual_balance = tidy(parseFloat(balance) - unclaimed_amount);
+		earnings_owed = unclaimed_amount;
+		
+		total_balance = tidy(parseFloat(balance) + parseFloat(investment) - unclaimed_amount);
+		
+		if (DEBUG) {
+			console.log('Total Balance: ' + total_balance);
+		}
 	});
 }
+
+function rebalance_investment() {
+	// balancing to 90% invested and 10% live balance (not including unused tips)
+	
+	total_balancable_balance = total_balance - donated_amount_since_last_round;
+	
+	ideal_investment = total_balancable_balance * 0.9;
+	
+	if (ideal_investment > investment) {
+		// invest some
+		invest(ideal_investment - investment);
+	} else if (ideal_investment < investment) {
+		// divest some
+		divest(investment - ideal_investment);
+	}
+}
+
+function invest(amount) {
+	amount = tidy(amount);
+	send_public_message('/invest ' + amount);
+	
+	investment = investment + amount;
+	balance = balance - amount;
+}
+
+function divest(amount) {
+	amount = tidy(amount);
+	send_public_message('/divest ' + amount);
+	
+	investment = investment - amount;
+	balance = balance + amount;
+}
+
 
 function init_readline() {
     var readline = require('readline').createInterface({
@@ -430,15 +472,18 @@ function load_round() {
 	current_round_answered_question_answer_times = new Array();
 	
 	// calculate payout
-	var one_percent_of_bankroll = parseFloat(actual_balance) * 0.01;
+	var one_percent_of_bankroll = parseFloat(total_balance) * 0.01;
 	var total_payout = one_percent_of_bankroll;
 	if ((donated_amount_since_last_round - 1) > total_payout) {
 		total_payout = donated_amount_since_last_round - 1;
 	}
 	
+	if (total_payout >= (balance - earnings_owed)) {
+		rebalance_investment();
+	}
+	
 	// the total payout is either 1% of bankroll or the amount tipped minus 1 CLAM since last round. whichever is larger.
 	current_round_per_question_payout = tidy(total_payout / (number_of_questions + 2));
-	donated_amount_since_last_round = 0;
 	
 	db.all("SELECT * FROM Question WHERE banned = 0 AND reviewed = 1 ORDER BY RANDOM()", function(err, rows) {
 		var ids = new Array();
@@ -627,6 +672,13 @@ function finish_round() {
 	payout_current_round_commission();
 	add_question_author_earnings();
 	save_current_round_to_db();
+	
+	donated_amount_since_last_round = 0;
+	load_donations_since_last_round();
+	if (donated_amount_since_last_round >= DONATION_THRESHOLD) {
+		send_announcement('Sufficient donations for another round. Next round in 1 minute.');
+		start_next_round_timeouts(1);
+	}
 }
 
 function payout_current_round_winners() {
@@ -978,7 +1030,7 @@ function receive_tip(sender_uid, sender_name, amount, announce) {
 	log_donation(sender_uid, amount);
 	db.run('INSERT INTO Donation(uid, amount) VALUES(\'' + sender_uid + '\', \'' + amount + '\')');
 	
-	if (donated_amount_since_last_round >= 1) {
+	if (donated_amount_since_last_round >= DONATION_THRESHOLD) {
 		if (announce === true) {
 			var announcement = 'Thank you <' + sender_name + '> for the ' + amount + ' CLAM donation!';
 			send_announcement(announcement);
@@ -1277,7 +1329,7 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 			break;
 			
 		case '/balance':
-			send_private_message(sender_uid, actual_balance + ' CLAM');
+			send_private_message(sender_uid, total_balance + ' CLAM (' + tidy(investment) + ' staking, ' + tidy(balance) + ' live balance, ' + tidy(earnings_owed) + ' earnings owed)');
 			break;
 			
 		case '/unclaimed':
@@ -1481,6 +1533,16 @@ function handle_private_message_default(sender_uid, sender_name, message) {
 						}
 					}
 				});
+			} else {
+				send_private_message(sender_uid, 'You do not have permission for this.');
+			}
+			break;
+			
+		case '/rebalance':
+			if (admins.contains(sender_uid)) {
+				send_private_message(sender_uid, 'BEFORE: ' + total_balance + ' CLAM (' + tidy(investment) + ' staking, ' + tidy(balance) + ' live balance, ' + tidy(earnings_owed) + ' earnings owed)');
+				rebalance_investment();
+				send_private_message(sender_uid, 'AFTER: ' + total_balance + ' CLAM (' + tidy(investment) + ' staking, ' + tidy(balance) + ' live balance, ' + tidy(earnings_owed) + ' earnings owed)');
 			} else {
 				send_private_message(sender_uid, 'You do not have permission for this.');
 			}
@@ -1855,7 +1917,11 @@ function run_bot(cookie) {
             //   wdaddr: '' }
 
             csrf = data.csrf;
-			update_balance(data.balance);
+			
+			investment = data.investment;
+			balance = data.balance;
+			refresh_total_balance();
+			
             max_profit = data.max_profit;
 			my_uid = uid;
             console.log('### CONNECTED as (' + uid + ') <' + data.name + '> ###');
@@ -1881,6 +1947,11 @@ function run_bot(cookie) {
     socket.on('tip', function(sender_uid, sender_name, amount, r, i) {
 		receive_tip(sender_uid, sender_name, amount, true)
     });
+	
+	socket.on('result', function(result) {
+		investment = result['investment'];
+		refresh_total_balance();
+	});
 
     socket.on('address', function(addr, img, confs) {
         console.log('DEPOSIT:', addr);
@@ -1911,7 +1982,8 @@ function run_bot(cookie) {
     });
 
     socket.on('balance', function(data) {
-		update_balance(data)
+		balance = data;
+		refresh_total_balance()
     });
 
     socket.on('disconnect', function() {
