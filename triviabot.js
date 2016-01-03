@@ -1843,17 +1843,17 @@ function run_bot(cookie) {
 		// console.log('logging in again');
 		// login_then_run_bot();
 		
-		if (JSON.stringify(err).indexOf("can not find session") > -1) {
-			error_count += 1;
-			if (error_count > 1) {
-				login_then_run_bot();
-				error_count = 0;
-			}
-		}
-		
-		// ### DISCONNECTED ###
-		// caught error:   can not find session
-		log_error(JSON.stringify(err));
+		// if (JSON.stringify(err).indexOf("can not find session") > -1) {
+		// 	error_count += 1;
+		// 	if (error_count > 1) {
+		// 		login_then_run_bot();
+		// 		error_count = 0;
+		// 	}
+		// }
+		//
+		// // ### DISCONNECTED ###
+		// // caught error:   can not find session
+		// log_error(JSON.stringify(err));
     });
 
     socket.on('init', function(data) {
